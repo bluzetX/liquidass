@@ -457,6 +457,11 @@ static BOOL LGIsLegacyClockDateLabel(UIView *view) {
     return LGHasAncestorClassNamed(view, @"SBFLockScreenDateSubtitleDateView");
 }
 
+static BOOL LGIsModernClockDateLabel(UIView *view) {
+    if (![view isKindOfClass:[UILabel class]]) return NO;
+    return LGHasAncestorClassNamed(view, @"CSProminentSubtitleDateView");
+}
+
 static NSString *LGClockAbbreviatedDateString(void) {
     static NSDateFormatter *formatter;
     static dispatch_once_t onceToken;
@@ -466,7 +471,7 @@ static NSString *LGClockAbbreviatedDateString(void) {
 
     formatter.locale = [NSLocale autoupdatingCurrentLocale];
     formatter.timeZone = [NSTimeZone localTimeZone];
-    [formatter setLocalizedDateFormatFromTemplate:@"EEE d MMM"];
+    [formatter setLocalizedDateFormatFromTemplate:@"EEE MMM d"];
 
     NSString *text = [formatter stringFromDate:[NSDate date]];
     if (text.length == 0) return text;
@@ -479,7 +484,8 @@ static NSString *LGClockAbbreviatedDateString(void) {
 }
 
 static void LGApplyAbbreviatedDateTextToLabel(UILabel *label) {
-    if (!label || !LGIsLegacyClockDateLabel(label)) return;
+    if (!label) return;
+    if (!LGIsLegacyClockDateLabel(label) && !LGIsModernClockDateLabel(label)) return;
 
     static char kLGClockApplyingDateTextKey;
     if ([objc_getAssociatedObject(label, &kLGClockApplyingDateTextKey) boolValue]) return;
@@ -496,7 +502,7 @@ static void LGApplyAbbreviatedDateTextToLabel(UILabel *label) {
 static void LGApplyAbbreviatedDateTextInView(UIView *root) {
     if (!root) return;
     LGTraverseViews(root, ^(UIView *view) {
-        if (LGIsLegacyClockDateLabel(view)) {
+        if (LGIsLegacyClockDateLabel(view) || LGIsModernClockDateLabel(view)) {
             LGApplyAbbreviatedDateTextToLabel((UILabel *)view);
         }
     });
@@ -1925,6 +1931,20 @@ static void LGRefreshRegisteredClockHosts(void) {
     %orig;
     LGApplyAbbreviatedDateTextInView((UIView *)self);
     LGPositionLegacyDateSubtitleAboveClock((UIView *)self);
+}
+
+%end
+
+%hook CSProminentSubtitleDateView
+
+- (void)didMoveToWindow {
+    %orig;
+    LGApplyAbbreviatedDateTextInView((UIView *)self);
+}
+
+- (void)layoutSubviews {
+    %orig;
+    LGApplyAbbreviatedDateTextInView((UIView *)self);
 }
 
 %end
