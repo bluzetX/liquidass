@@ -123,6 +123,7 @@ void LGDetachLockHostIfNeeded(UIView *view) {
     if (![objc_getAssociatedObject(view, kLockAttachedKey) boolValue]) return;
     objc_setAssociatedObject(view, kLockAttachedKey, nil, OBJC_ASSOCIATION_ASSIGN);
     sLockDisplayLinkState.activeCount = MAX(0, sLockDisplayLinkState.activeCount - 1);
+    LGDisplayLinkStateDidChangeActivity(&sLockDisplayLinkState);
     if (sLockDisplayLinkState.activeCount == 0) LGStopLockDisplayLink();
 }
 
@@ -149,6 +150,7 @@ void LGAttachLockHostIfNeeded(UIView *view) {
     if ([objc_getAssociatedObject(view, kLockAttachedKey) boolValue]) return;
     objc_setAssociatedObject(view, kLockAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     sLockDisplayLinkState.activeCount++;
+    LGDisplayLinkStateDidChangeActivity(&sLockDisplayLinkState);
     LGStartLockDisplayLink();
 }
 

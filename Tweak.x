@@ -323,6 +323,7 @@ static NSString * const kLGContextMenuSnapshotImageCacheKey = @"context.snapshot
 static NSString * const kLGFolderSnapshotImageCacheKey = @"folder.snapshot";
 static NSString * const kLGHomeWallpaperImageCacheKey = @"wallpaper.home";
 static NSString * const kLGLockWallpaperImageCacheKey = @"wallpaper.lock";
+static NSString * const kLGLockscreenWallpaperFlatFilePath = @"/tmp/LGLockscreenWallpaper.png";
 static NSString * const kLGRuntimeCacheUsageBytesKey = @"__runtime_cache_usage_bytes";
 static unsigned long long sLastPublishedRuntimeCacheUsageBytes = ULLONG_MAX;
 static UIImage *LGGetCachedTransientImage(NSString *key);
@@ -418,6 +419,46 @@ static void LGSetCachedSpringBoardHomeImageValue(UIImage *image) {
 static void LGSetCachedSpringBoardLockImageValue(UIImage *image) {
     sCachedSpringBoardLockImage = image;
     LGSetCachedTransientImage(kLGLockWallpaperImageCacheKey, image);
+}
+
+static UIImage *LG_loadFlattenedLockscreenWallpaperFile(void) {
+    NSString *path = kLGLockscreenWallpaperFlatFilePath;
+    NSDictionary *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
+    NSDate *mtime = attrs[NSFileModificationDate];
+    if (sCachedSpringBoardLockImage &&
+        [sCachedSpringBoardLockPath isEqualToString:path] &&
+        ((!mtime && !sCachedSpringBoardLockMTime) || [sCachedSpringBoardLockMTime isEqualToDate:mtime])) {
+        return sCachedSpringBoardLockImage;
+    }
+
+    UIImage *image = [UIImage imageWithContentsOfFile:path];
+    if (!image) return nil;
+    NSTimeInterval timestamp = mtime ? mtime.timeIntervalSince1970 : 0.0;
+    NSString *cacheKey = [NSString stringWithFormat:@"wallpaper:lock-flat:%0.3f:%@",
+                          timestamp,
+                          path.lastPathComponent ?: @"(null)"];
+    LGSetImageStableCacheKey(image, cacheKey);
+    LGSetCachedSpringBoardLockImageValue(image);
+    sCachedSpringBoardLockMTime = mtime;
+    sCachedSpringBoardLockPath = [path copy];
+    return image;
+}
+
+static void LG_storeFlattenedLockscreenWallpaperFile(UIImage *image) {
+    if (!image) return;
+    NSString *path = kLGLockscreenWallpaperFlatFilePath;
+    NSTimeInterval timestamp = CACurrentMediaTime();
+    LGSetImageStableCacheKey(image, [NSString stringWithFormat:@"wallpaper:lock-flat-live:%0.6f", timestamp]);
+    LGSetCachedSpringBoardLockImageValue(image);
+    sCachedSpringBoardLockPath = [path copy];
+    sCachedSpringBoardLockMTime = [NSDate date];
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        @autoreleasepool {
+            NSData *pngData = UIImagePNGRepresentation(image);
+            if (!pngData) return;
+            [pngData writeToFile:path atomically:YES];
+        }
+    });
 }
 
 static void LGResetHomescreenSnapshotCaches(void);
@@ -904,6 +945,22 @@ static BOOL LG_drawLockscreenWallpaperInContext(CGSize screenSize) {
     return LGDrawViewHierarchyIntoCurrentContext(win, bounds, NO);
 }
 
+static UIImage *LG_captureFreshLockscreenWallpaperSnapshot(void) {
+    CGSize screenSize = UIScreen.mainScreen.bounds.size;
+    CGFloat scale     = UIScreen.mainScreen.scale;
+
+    UIGraphicsBeginImageContextWithOptions(screenSize, YES, scale);
+    BOOL ok = LG_drawLockscreenWallpaperInContext(screenSize);
+    UIImage *snap = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    LGLog(@"lockscreen snapshot result ok=%d size=%@ scale=%.2f",
+          ok ? 1 : 0,
+          snap ? NSStringFromCGSize(snap.size) : @"(null)",
+          snap ? snap.scale : 0.0);
+    if (!ok || !snap || LG_imageLooksBlack(snap)) return nil;
+    return snap;
+}
+
 void LG_refreshHomescreenSnapshot(void) {
     CFTimeInterval profileStart = LGProfileBegin();
     LGAssertMainThread();
@@ -1092,6 +1149,7 @@ static void LGResetLockscreenSnapshotCaches(void) {
     LGSetCachedSpringBoardLockImageValue(nil);
     sCachedSpringBoardLockMTime = nil;
     sCachedSpringBoardLockPath = nil;
+    [[NSFileManager defaultManager] removeItemAtPath:kLGLockscreenWallpaperFlatFilePath error:nil];
     LGInvalidateLockscreenSnapshotCache();
 }
 
@@ -1426,20 +1484,20 @@ UIImage *LG_getLockscreenSnapshot(void) {
             LGLog(@"loaded lockscreen wallpaper from imageView fallback");
             return iv.image;
         }
+    } else {
+        UIImage *flatImage = LG_loadFlattenedLockscreenWallpaperFile();
+        if (flatImage) {
+            return flatImage;
+        }
+        UIImage *fresh = LG_captureFreshLockscreenWallpaperSnapshot();
+        if (fresh) {
+            LG_storeFlattenedLockscreenWallpaperFile(fresh);
+            return fresh;
+        }
+        return nil;
     }
 
-    CGSize screenSize = UIScreen.mainScreen.bounds.size;
-    CGFloat scale     = UIScreen.mainScreen.scale;
-
-    UIGraphicsBeginImageContextWithOptions(screenSize, YES, scale);
-    BOOL ok = LG_drawLockscreenWallpaperInContext(screenSize);
-    UIImage *snap = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    LGLog(@"lockscreen snapshot result ok=%d size=%@ scale=%.2f",
-          ok ? 1 : 0,
-          snap ? NSStringFromCGSize(snap.size) : @"(null)",
-          snap ? snap.scale : 0.0);
-    return snap;
+    return LG_captureFreshLockscreenWallpaperSnapshot();
 }
 
 UIImage *LG_getRawLockscreenWallpaperImage(void) {
@@ -1448,6 +1506,14 @@ UIImage *LG_getRawLockscreenWallpaperImage(void) {
     if (!LG_isAtLeastiOS16()) {
         UIImage *asset = LG_loadSpringBoardWallpaperImage(YES);
         if (asset) return asset;
+    } else {
+        UIImage *flatImage = LG_loadFlattenedLockscreenWallpaperFile();
+        if (flatImage) return flatImage;
+        UIImage *fresh = LG_captureFreshLockscreenWallpaperSnapshot();
+        if (fresh) {
+            LG_storeFlattenedLockscreenWallpaperFile(fresh);
+            return fresh;
+        }
     }
 
     UIWindow *win = LG_getWallpaperWindow(YES);
@@ -1685,7 +1751,25 @@ static void LG_scheduleLockscreenWallpaperRefreshAttempt(NSString *reason,
                    reason ?: @"(unknown)",
                    delay);
         LGResetLockscreenSnapshotCaches();
-        BOOL pushed = LGPushCurrentLockscreenSnapshotToAllGlassViews();
+        UIImage *freshLockImage = LG_captureFreshLockscreenWallpaperSnapshot();
+        if (freshLockImage && LG_isAtLeastiOS16()) {
+            LG_storeFlattenedLockscreenWallpaperFile(freshLockImage);
+        }
+        BOOL pushed = NO;
+        if (freshLockImage) {
+            static Class sceneCls;
+            if (!sceneCls) sceneCls = [UIWindowScene class];
+            for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+                if (![scene isKindOfClass:sceneCls]) continue;
+                for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+                    LG_pushConfiguredBackdropToTree(window, LGUpdateGroupLockscreen, freshLockImage);
+                }
+            }
+            pushed = YES;
+        }
+        if (!pushed) {
+            pushed = LGPushCurrentLockscreenSnapshotToAllGlassViews();
+        }
         LG_updateRegisteredGlassViews(LGUpdateGroupLockscreen);
         if (!pushed && allowRetry && token == sPendingLockscreenWallpaperRefreshToken) {
             LG_scheduleLockscreenWallpaperRefreshAttempt(reason, token, 0.85, NO);

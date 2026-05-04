@@ -34,14 +34,18 @@ static NSString * const LGPrefsDidReloadInProcessNotification = @"dylv.liquidass
 static NSDictionary<NSString *, id> *sLGCachedPreferences = nil;
 static os_unfair_lock sLGPrefsLock = OS_UNFAIR_LOCK_INIT;
 static dispatch_once_t sLGPrefsSetupOnce;
+static dispatch_queue_t sLGPrefsWriteQueue;
 static dispatch_queue_t sLGLogQueue;
 static NSFileHandle *sLGLogHandle;
 static NSString * const kLGDynamicDefaultPrefix = @"__dynamic_default.";
 static void *kLGImageStableCacheKeyAssociation = &kLGImageStableCacheKeyAssociation;
 static os_unfair_lock sLGProfileLock = OS_UNFAIR_LOCK_INIT;
 static NSMutableDictionary<NSString *, NSMutableDictionary<NSString *, NSNumber *> *> *sLGProfileStats = nil;
+static NSMutableDictionary<NSString *, NSNumber *> *sLGPendingDynamicDefaultWrites = nil;
+static BOOL sLGDynamicDefaultFlushScheduled = NO;
 static CFTimeInterval sLGProfileWindowStart = 0.0;
 static const CFTimeInterval kLGProfileFlushInterval = 2.0;
+static const CFTimeInterval kLGDynamicDefaultFlushDelay = 0.25;
 
 static void LGCloseLogHandle(void) {
     if (!sLGLogHandle) return;
@@ -141,6 +145,34 @@ static NSDictionary<NSString *, id> *LGCopyPreferencesDictionary(void) {
         return @{};
     }
     return dictionary;
+}
+
+static void LGScheduleDynamicDefaultFlush(void) {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sLGPrefsWriteQueue = dispatch_queue_create("dylv.liquidass.prefswrite", DISPATCH_QUEUE_SERIAL);
+    });
+
+    dispatch_async(sLGPrefsWriteQueue, ^{
+        if (sLGDynamicDefaultFlushScheduled) return;
+        sLGDynamicDefaultFlushScheduled = YES;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kLGDynamicDefaultFlushDelay * NSEC_PER_SEC)),
+                       sLGPrefsWriteQueue, ^{
+            NSDictionary<NSString *, NSNumber *> *pending = [sLGPendingDynamicDefaultWrites copy];
+            sLGPendingDynamicDefaultWrites = nil;
+            sLGDynamicDefaultFlushScheduled = NO;
+            if (!pending.count) return;
+
+            for (NSString *key in pending) {
+                NSNumber *value = pending[key];
+                if (!key.length || !value) continue;
+                CFPreferencesSetAppValue((__bridge CFStringRef)key,
+                                         (__bridge CFPropertyListRef)value,
+                                         (__bridge CFStringRef)LGPrefsDomain);
+            }
+            CFPreferencesAppSynchronize((__bridge CFStringRef)LGPrefsDomain);
+        });
+    });
 }
 
 static NSString *LGDynamicDefaultKey(NSString *key) {
@@ -299,11 +331,24 @@ void LGCacheDynamicDefaultFloat(NSString *key, CGFloat value) {
     CGFloat existing = LG_prefFloat(dynamicKey, -1.0);
     if (fabs(existing - value) <= 0.01) return;
 
-    CFPreferencesSetAppValue((__bridge CFStringRef)dynamicKey,
-                             (__bridge CFPropertyListRef)@(value),
-                             (__bridge CFStringRef)LGPrefsDomain);
-    CFPreferencesAppSynchronize((__bridge CFStringRef)LGPrefsDomain);
-    LGReloadPreferences();
+    NSNumber *boxedValue = @(value);
+    os_unfair_lock_lock(&sLGPrefsLock);
+    NSMutableDictionary<NSString *, id> *mutablePrefs = [sLGCachedPreferences mutableCopy] ?: [NSMutableDictionary dictionary];
+    mutablePrefs[dynamicKey] = boxedValue;
+    sLGCachedPreferences = [mutablePrefs copy];
+    os_unfair_lock_unlock(&sLGPrefsLock);
+
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sLGPrefsWriteQueue = dispatch_queue_create("dylv.liquidass.prefswrite", DISPATCH_QUEUE_SERIAL);
+    });
+    dispatch_async(sLGPrefsWriteQueue, ^{
+        if (!sLGPendingDynamicDefaultWrites) {
+            sLGPendingDynamicDefaultWrites = [NSMutableDictionary dictionary];
+        }
+        sLGPendingDynamicDefaultWrites[dynamicKey] = boxedValue;
+        LGScheduleDynamicDefaultFlush();
+    });
 }
 
 NSString *LGDefaultRenderingModeForKey(NSString *key) {

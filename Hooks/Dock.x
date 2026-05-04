@@ -409,6 +409,7 @@ static void LGDockPrefsChanged(CFNotificationCenterRef center,
     if (![objc_getAssociatedObject(self_, kDockAttachedKey) boolValue]) {
         objc_setAssociatedObject(self_, kDockAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         sDockDisplayLinkState.activeCount++;
+        LGDisplayLinkStateDidChangeActivity(&sDockDisplayLinkState);
         startDockDisplayLink();
     }
 }
@@ -443,6 +444,7 @@ static void LGDockPrefsChanged(CFNotificationCenterRef center,
             if (![objc_getAssociatedObject(self_, kDockAttachedKey) boolValue]) {
                 objc_setAssociatedObject(self_, kDockAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
                 sDockDisplayLinkState.activeCount++;
+                LGDisplayLinkStateDidChangeActivity(&sDockDisplayLinkState);
                 startDockDisplayLink();
             }
         }
@@ -462,6 +464,7 @@ static void LGDockPrefsChanged(CFNotificationCenterRef center,
         objc_setAssociatedObject(self_, kDockAttachedKey, nil, OBJC_ASSOCIATION_ASSIGN);
         objc_setAssociatedObject(self_, kDockModeKey, nil, OBJC_ASSOCIATION_ASSIGN);
         sDockDisplayLinkState.activeCount = MAX(0, sDockDisplayLinkState.activeCount - 1);
+        LGDisplayLinkStateDidChangeActivity(&sDockDisplayLinkState);
         if (sDockDisplayLinkState.activeCount == 0) stopDockDisplayLink();
     }
     %orig;

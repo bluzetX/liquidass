@@ -52,6 +52,8 @@ LG_FLOAT_PREF_FUNC(LGAppIconDarkTintAlpha, "AppIcons.DarkTintAlpha", 0.0)
 static BOOL LGIsHomescreenIconImageView(UIView *view) {
     if (!view.window) return NO;
     if (![NSStringFromClass(view.class) isEqualToString:@"SBIconImageView"]) return NO;
+    if (LGResponderChainContainsClassNamed(view, @"SBFolderViewController")) return NO;
+    if (LGResponderChainContainsClassNamed(view, @"SBAppLibraryViewController")) return NO;
 
     UIView *parent = view.superview;
     if (!parent) return NO;

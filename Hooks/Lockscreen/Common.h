@@ -64,3 +64,4 @@ void LGAttachLockHostIfNeeded(UIView *view);
 void LGDetachLockHostIfNeeded(UIView *view);
 void LGLockscreenRefreshAllHosts(void);
 void LGRefreshBannerPlatterHosts(void);
+void LGRefreshAllClockHosts(void);

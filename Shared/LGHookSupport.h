@@ -38,3 +38,5 @@ void LGStartDisplayLinkState(LGDisplayLinkState *state,
                              NSInteger preferredFPS,
                              dispatch_block_t tickBlock);
 void LGStopDisplayLinkState(LGDisplayLinkState *state);
+void LGDisplayLinkStateDidChangeActivity(LGDisplayLinkState *state);
+void LGSetDisplayLinkStatePreferredFPS(LGDisplayLinkState *state, NSInteger preferredFPS);

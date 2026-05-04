@@ -51,7 +51,9 @@ static BOOL LGHasBannerPresentationContext(UIView *view) {
 static void LGStartBannerDisplayLink(void) {
     LGAssertMainThread();
     if (sBannerDisplayLinkState.link || !LGBannerEnabled()) return;
-    LGStartDisplayLinkState(&sBannerDisplayLinkState, 60, ^{
+    LGStartDisplayLinkState(&sBannerDisplayLinkState,
+                            LGPreferredFramesPerSecondForKey(@"Homescreen.FPS", 30),
+                            ^{
         LGRefreshBannerPlatterHosts();
     });
 }
@@ -67,6 +69,8 @@ static void LGAttachBannerHostIfNeeded(UIView *view) {
     if ([objc_getAssociatedObject(view, kBannerAttachedKey) boolValue]) return;
     objc_setAssociatedObject(view, kBannerAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     [LGBannerHostRegistry() addObject:view];
+    sBannerDisplayLinkState.activeCount++;
+    LGDisplayLinkStateDidChangeActivity(&sBannerDisplayLinkState);
     LGStartBannerDisplayLink();
 }
 
@@ -77,6 +81,8 @@ static void LGDetachBannerHostIfNeeded(UIView *view) {
     objc_setAssociatedObject(view, kBannerAttachedKey, nil, OBJC_ASSOCIATION_ASSIGN);
     LGRemoveLiveBackdropCaptureView(view, kBannerBackdropViewKey);
     [LGBannerHostRegistry() removeObject:view];
+    sBannerDisplayLinkState.activeCount = MAX(0, sBannerDisplayLinkState.activeCount - 1);
+    LGDisplayLinkStateDidChangeActivity(&sBannerDisplayLinkState);
     if (LGBannerLiveHostCount() == 0) {
         LGStopBannerDisplayLink();
     }
@@ -256,6 +262,8 @@ void LGRefreshBannerPlatterHosts(void) {
     LGAssertMainThread();
     NSArray<UIView *> *liveHosts = [LGBannerHostRegistry() allObjects];
     if (liveHosts.count == 0) {
+        sBannerDisplayLinkState.activeCount = 0;
+        LGDisplayLinkStateDidChangeActivity(&sBannerDisplayLinkState);
         LGStopBannerDisplayLink();
         return;
     }

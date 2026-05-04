@@ -18,6 +18,8 @@
 "prefs.control.size_boost" = "Size Boost";
 "prefs.control.embolden" = "Embolden";
 "prefs.control.clock_gap" = "Clock Gap";
+"prefs.control.clock_vertical_offset" = "Clock Vertical Offset";
+"prefs.control.date_vertical_offset" = "Date Vertical Offset";
 "prefs.control.variable_font" = "iOS 26 Clock";
 "prefs.control.variable_font_size" = "Font Size";
 "prefs.control.variable_font_weight" = "Weight";
@@ -88,6 +90,8 @@
 "prefs.subtitle.size_boost" = "Scales the legacy clock size relative to the stock layout.";
 "prefs.subtitle.embolden" = "Artificially thickens the legacy clock mask for a fuller look.";
 "prefs.subtitle.clock_gap" = "Vertical gap between the legacy clock and the date text.";
+"prefs.subtitle.clock_vertical_offset" = "Shifts the glass clock upward.";
+"prefs.subtitle.date_vertical_offset" = "Shifts the lockscreen date upward.";
 "prefs.subtitle.variable_font" = "Uses the iOS 26-style adaptive clock font for the glass clock when available.";
 "prefs.subtitle.variable_font_size" = "Point size multiplier for the iOS 26 clock font.";
 "prefs.subtitle.variable_font_weight" = "Weight axis value for the iOS 26 clock font.";

@@ -18,6 +18,8 @@
 "prefs.control.size_boost" = "Tăng kích thước";
 "prefs.control.embolden" = "Làm dày";
 "prefs.control.clock_gap" = "Khoảng cách đồng hồ";
+"prefs.control.clock_vertical_offset" = "Độ lệch dọc đồng hồ";
+"prefs.control.date_vertical_offset" = "Độ lệch dọc ngày tháng";
 "prefs.control.variable_font" = "Đồng hồ iOS 26";
 "prefs.control.variable_font_size" = "Cỡ chữ";
 "prefs.control.variable_font_weight" = "Độ đậm";
@@ -54,6 +56,8 @@
 "prefs.subtitle.size_boost" = "Phóng to đồng hồ kiểu cũ so với bố cục mặc định.";
 "prefs.subtitle.embolden" = "Làm dày giả mask đồng hồ kiểu cũ để nhìn đầy hơn.";
 "prefs.subtitle.clock_gap" = "Khoảng cách dọc giữa đồng hồ kiểu cũ và dòng ngày tháng.";
+"prefs.subtitle.clock_vertical_offset" = "Dịch đồng hồ kính lên trên.";
+"prefs.subtitle.date_vertical_offset" = "Dịch ngày tháng trên màn hình khóa lên trên.";
 "prefs.subtitle.variable_font" = "Dùng phông đồng hồ thích ứng kiểu iOS 26 cho đồng hồ kính khi có sẵn.";
 "prefs.subtitle.variable_font_size" = "Hệ số nhân cỡ chữ cho phông đồng hồ iOS 26.";
 "prefs.subtitle.variable_font_weight" = "Giá trị trục độ đậm của phông đồng hồ iOS 26.";

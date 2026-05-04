@@ -826,6 +826,20 @@ NSArray<NSDictionary *> *LGLockscreenItems(void) {
     [items addObject:LGGlassRefractionSetting(@"Lockscreen.Clock.RefractionScale", 1.5, 0.0, 5.0, 2)];
     [items addObject:LGGlassSpecularSetting(@"Lockscreen.Clock.SpecularOpacity", 0.6, 0.0, 1.0, 2)];
     [items addObject:LGGlassQualitySetting(@"Lockscreen.Clock.WallpaperScale", 1.0, 0.1, 1.0, 2)];
+    [items addObject:LGSliderSetting(@"Lockscreen.Clock.VerticalOffset",
+                                     LGLocalized(@"prefs.control.clock_vertical_offset"),
+                                     LGLocalized(@"prefs.subtitle.clock_vertical_offset"),
+                                     0.0,
+                                     0.0,
+                                     120.0,
+                                     1)];
+    [items addObject:LGSliderSetting(@"Lockscreen.Clock.DateVerticalOffset",
+                                     LGLocalized(@"prefs.control.date_vertical_offset"),
+                                     LGLocalized(@"prefs.subtitle.date_vertical_offset"),
+                                     0.0,
+                                     0.0,
+                                     120.0,
+                                     1)];
     if (LGIsAtLeastiOS16()) {
         [items addObject:LGSectionSetting(@"", @"")];
         [items addObject:LGSettingControlledByKey(LGSwitchSetting(@"Lockscreen.Clock.VariableFont.Enabled",

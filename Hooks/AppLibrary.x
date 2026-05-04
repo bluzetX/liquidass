@@ -162,6 +162,7 @@ static void LGScheduleFocusResanitize(UIView *view) {
 
 static void startAppLibDisplayLink(void) {
     if (!LGAnyAppLibraryGlassEnabled()) return;
+    sAppLibraryDisplayLinkState.activeCount = 1;
     LGStartDisplayLinkState(&sAppLibraryDisplayLinkState, LGPreferredFramesPerSecondForKey(@"AppLibrary.FPS", 30), ^{
         if (LG_prefersLiveCapture(@"AppLibrary.RenderingMode") ||
             LG_prefersLiveCapture(@"AppLibrary.Search.RenderingMode")) {
@@ -170,8 +171,11 @@ static void startAppLibDisplayLink(void) {
             LG_updateRegisteredGlassViews(LGUpdateGroupAppLibrary);
         }
     });
+    LGDisplayLinkStateDidChangeActivity(&sAppLibraryDisplayLinkState);
 }
 static void stopAppLibDisplayLink(void) {
+    sAppLibraryDisplayLinkState.activeCount = 0;
+    LGDisplayLinkStateDidChangeActivity(&sAppLibraryDisplayLinkState);
     LGStopDisplayLinkState(&sAppLibraryDisplayLinkState);
 }
 

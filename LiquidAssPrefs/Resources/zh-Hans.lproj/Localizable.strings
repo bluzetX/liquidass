@@ -18,6 +18,8 @@
 "prefs.control.size_boost" = "放大字体";
 "prefs.control.embolden" = "加粗";
 "prefs.control.clock_gap" = "时间间距";
+"prefs.control.clock_vertical_offset" = "Clock Vertical Offset";
+"prefs.control.date_vertical_offset" = "Date Vertical Offset";
 "prefs.control.variable_font" = "iOS 26 时钟";
 "prefs.control.variable_font_size" = "字号";
 "prefs.control.variable_font_weight" = "字重";
@@ -54,6 +56,8 @@
 "prefs.subtitle.size_boost" = "相对于系统布局缩放旧版时钟大小";
 "prefs.subtitle.embolden" = "人为加粗旧版时钟遮罩以获得更饱满的外观";
 "prefs.subtitle.clock_gap" = "旧版时钟与日期文本之间的垂直间距";
+"prefs.subtitle.clock_vertical_offset" = "Shifts the glass clock upward.";
+"prefs.subtitle.date_vertical_offset" = "Shifts the lockscreen date upward.";
 "prefs.subtitle.variable_font" = "可用时为玻璃时钟使用 iOS 26 风格的自适应时钟字体";
 "prefs.subtitle.variable_font_size" = "iOS 26 时钟字体的字号倍率";
 "prefs.subtitle.variable_font_weight" = "iOS 26 时钟字体的字重轴值";

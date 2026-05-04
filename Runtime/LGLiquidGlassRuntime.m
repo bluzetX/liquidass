@@ -472,7 +472,23 @@ void LGPrewarmPipelines(void) {
                                     screenRect.size.height * scale);
         }
     } else {
-        CALayer *pres = self.layer.presentationLayer ?: self.layer;
+        CALayer *baseLayer = self.layer;
+        CALayer *pres = baseLayer.presentationLayer ?: baseLayer;
+        if (pres == baseLayer) {
+            CGRect nullRect = CGRectNull;
+            CGSize drawableSize = _mtkView.drawableSize;
+            if (_hasCachedVisualMetrics
+                && CGRectEqualToRect(_cachedVisualRectPx, nullRect)
+                && fabs(_cachedDrawableSizePx.width - drawableSize.width) < 0.5f
+                && fabs(_cachedDrawableSizePx.height - drawableSize.height) < 0.5f) {
+                return NO;
+            }
+            _cachedVisualRectPx = nullRect;
+            _cachedDrawableSizePx = drawableSize;
+            _cachedVisualScale = 1.0f;
+            _hasCachedVisualMetrics = YES;
+            return YES;
+        }
         CALayer *root = pres;
         while (root.superlayer)
             root = root.superlayer.presentationLayer ?: root.superlayer;

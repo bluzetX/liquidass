@@ -165,6 +165,11 @@ static NSInteger LGSharedDisplayLinkMaximumFPS(void) {
     return maxFPS > 0 ? maxFPS : 60;
 }
 
+static BOOL LGDisplayLinkStateIsActive(LGDisplayLinkState *state) {
+    if (!state || state->link != sSharedDisplayLink) return NO;
+    return state->activeCount > 0;
+}
+
 static void LGStopSharedDisplayLinkIfIdle(void) {
     if (sSharedDisplayLinkStates.count > 0) return;
     [sSharedDisplayLink invalidate];
@@ -175,17 +180,18 @@ static void LGStopSharedDisplayLinkIfIdle(void) {
 static void LGReconfigureSharedDisplayLinkFPS(void) {
     if (!sSharedDisplayLink) return;
     NSInteger highestFPS = 0;
+    BOOL hasActiveStates = NO;
     for (NSValue *value in sSharedDisplayLinkStates) {
         LGDisplayLinkState *state = value.pointerValue;
-        if (!state || state->link != sSharedDisplayLink) continue;
+        if (!LGDisplayLinkStateIsActive(state)) continue;
+        hasActiveStates = YES;
         highestFPS = MAX(highestFPS, state->preferredFPS);
     }
-    if (highestFPS <= 0) {
-        [sSharedDisplayLink invalidate];
-        sSharedDisplayLink = nil;
-        sSharedDisplayLinkHub = nil;
+    if (!hasActiveStates || highestFPS <= 0) {
+        sSharedDisplayLink.paused = YES;
         return;
     }
+    sSharedDisplayLink.paused = NO;
     NSInteger cappedFPS = MIN(MAX(highestFPS, 1), LGSharedDisplayLinkMaximumFPS());
     if ([sSharedDisplayLink respondsToSelector:@selector(setPreferredFramesPerSecond:)]) {
         sSharedDisplayLink.preferredFramesPerSecond = cappedFPS;
@@ -198,7 +204,7 @@ static void LGReconfigureSharedDisplayLinkFPS(void) {
     NSArray<NSValue *> *states = [sSharedDisplayLinkStates copy];
     for (NSValue *value in states) {
         LGDisplayLinkState *state = value.pointerValue;
-        if (!state || state->link != sSharedDisplayLink) continue;
+        if (!LGDisplayLinkStateIsActive(state)) continue;
 
         NSInteger preferredFPS = MAX(state->preferredFPS, 1);
         CFTimeInterval minimumInterval = 1.0 / (CFTimeInterval)preferredFPS;
@@ -222,6 +228,7 @@ static void LGEnsureSharedDisplayLink(void) {
     if (sSharedDisplayLink) return;
     sSharedDisplayLinkHub = [LGSharedDisplayLinkHub new];
     sSharedDisplayLink = [CADisplayLink displayLinkWithTarget:sSharedDisplayLinkHub selector:@selector(tick:)];
+    sSharedDisplayLink.paused = YES;
     [sSharedDisplayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
 }
 
@@ -282,4 +289,24 @@ void LGStopDisplayLinkState(LGDisplayLinkState *state) {
     state->lastTickTimestamp = 0.0;
     LGReconfigureSharedDisplayLinkFPS();
     LGStopSharedDisplayLinkIfIdle();
+}
+
+void LGDisplayLinkStateDidChangeActivity(LGDisplayLinkState *state) {
+    LGAssertMainThread();
+    if (!state || state->link != sSharedDisplayLink) return;
+    if (!sSharedDisplayLink) return;
+    if (state->activeCount <= 0) {
+        state->lastTickTimestamp = 0.0;
+    }
+    LGReconfigureSharedDisplayLinkFPS();
+}
+
+void LGSetDisplayLinkStatePreferredFPS(LGDisplayLinkState *state, NSInteger preferredFPS) {
+    LGAssertMainThread();
+    if (!state) return;
+    NSInteger cappedFPS = MIN(MAX(preferredFPS, 1), LGSharedDisplayLinkMaximumFPS());
+    if (state->preferredFPS == cappedFPS) return;
+    state->preferredFPS = cappedFPS;
+    state->lastTickTimestamp = 0.0;
+    LGReconfigureSharedDisplayLinkFPS();
 }

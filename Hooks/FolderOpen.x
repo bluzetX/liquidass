@@ -222,6 +222,7 @@ static void LGDetachFolderOpenHost(UIView *view) {
     if (![objc_getAssociatedObject(view, kFolderOpenAttachedKey) boolValue]) return;
     objc_setAssociatedObject(view, kFolderOpenAttachedKey, nil, OBJC_ASSOCIATION_ASSIGN);
     sFolderDisplayLinkState.activeCount = MAX(0, sFolderDisplayLinkState.activeCount - 1);
+    LGDisplayLinkStateDidChangeActivity(&sFolderDisplayLinkState);
     if (sFolderDisplayLinkState.activeCount == 0) scheduleFolderDisplayLinkStopIfIdle();
 }
 
@@ -287,6 +288,7 @@ static void injectIntoOpenFolder(UIView *host) {
     if (![objc_getAssociatedObject(host, kFolderOpenAttachedKey) boolValue]) {
         objc_setAssociatedObject(host, kFolderOpenAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         sFolderDisplayLinkState.activeCount++;
+        LGDisplayLinkStateDidChangeActivity(&sFolderDisplayLinkState);
     }
     startFolderDisplayLink();
 }

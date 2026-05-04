@@ -218,6 +218,7 @@ static void LGDetachWidgetGlassHostView(UIView *view) {
     if ([objc_getAssociatedObject(view, kWidgetAttachedKey) boolValue]) {
         objc_setAssociatedObject(view, kWidgetAttachedKey, nil, OBJC_ASSOCIATION_ASSIGN);
         sWidgetDisplayLinkState.activeCount = MAX(0, sWidgetDisplayLinkState.activeCount - 1);
+        LGDisplayLinkStateDidChangeActivity(&sWidgetDisplayLinkState);
         if (sWidgetDisplayLinkState.activeCount == 0) LGStopWidgetDisplayLink();
     }
 }
@@ -488,6 +489,7 @@ static void LGWidgetsPrefsChanged(CFNotificationCenterRef center,
     if (![objc_getAssociatedObject(self_, kWidgetAttachedKey) boolValue]) {
         objc_setAssociatedObject(self_, kWidgetAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         sWidgetDisplayLinkState.activeCount++;
+        LGDisplayLinkStateDidChangeActivity(&sWidgetDisplayLinkState);
         LGStartWidgetDisplayLink();
     }
 }
@@ -540,6 +542,7 @@ static void LGWidgetsPrefsChanged(CFNotificationCenterRef center,
     if (![objc_getAssociatedObject(host, kWidgetAttachedKey) boolValue]) {
         objc_setAssociatedObject(host, kWidgetAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         sWidgetDisplayLinkState.activeCount++;
+        LGDisplayLinkStateDidChangeActivity(&sWidgetDisplayLinkState);
         LGStartWidgetDisplayLink();
     }
 }

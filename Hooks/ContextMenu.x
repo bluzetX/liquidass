@@ -586,12 +586,14 @@ static void LGContextMenuPrefsChanged(CFNotificationCenterRef center,
             objc_setAssociatedObject(self, kCtxContainerAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             LG_cacheContextMenuSnapshot();
             sContextMenuDisplayLinkState.activeCount++;
+            LGDisplayLinkStateDidChangeActivity(&sContextMenuDisplayLinkState);
             startContextMenuLink();
         }
     } else {
         if ([objc_getAssociatedObject(self, kCtxContainerAttachedKey) boolValue]) {
             objc_setAssociatedObject(self, kCtxContainerAttachedKey, nil, OBJC_ASSOCIATION_ASSIGN);
             sContextMenuDisplayLinkState.activeCount = MAX(0, sContextMenuDisplayLinkState.activeCount - 1);
+            LGDisplayLinkStateDidChangeActivity(&sContextMenuDisplayLinkState);
             if (sContextMenuDisplayLinkState.activeCount == 0) stopContextMenuLink();
             LG_invalidateContextMenuSnapshot();
         }

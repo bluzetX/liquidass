@@ -12,6 +12,8 @@
 "prefs.control.bezel_width"="邊框寬度";
 "prefs.control.blur"="模糊";
 "prefs.control.clock_gap"="時鐘間距";
+"prefs.control.clock_vertical_offset"="Clock Vertical Offset";
+"prefs.control.date_vertical_offset"="Date Vertical Offset";
 "prefs.control.corner_radius"="圓角半徑";
 "prefs.control.dark_tint_alpha"="深色色調透明度";
 "prefs.control.embolden"="加粗";
@@ -123,6 +125,8 @@
 "prefs.subtitle.bezel_width"="玻璃視圖邊緣的厚度";
 "prefs.subtitle.blur"="玻璃視圖的柔和程度";
 "prefs.subtitle.clock_gap"="傳統時鐘與日期文字之間的垂直間距。";
+"prefs.subtitle.clock_vertical_offset"="Shifts the glass clock upward.";
+"prefs.subtitle.date_vertical_offset"="Shifts the lockscreen date upward.";
 "prefs.subtitle.corner_radius"="玻璃視圖的圓潤程度";
 "prefs.subtitle.dark_tint_alpha"="深色模式下黑色疊加的強度";
 "prefs.subtitle.embolden"="人為加粗傳統時鐘遮罩，使其看起來更飽滿。";
