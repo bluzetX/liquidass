@@ -41,7 +41,10 @@ static void *kCtxContainerAttachedKey  = &kCtxContainerAttachedKey;
 static void *kContextMenuBackdropAlphaKey = &kContextMenuBackdropAlphaKey;
 
 static void startContextMenuLink(void) {
-    LGStartDisplayLinkState(&sContextMenuDisplayLinkState, LGPreferredFramesPerSecondForKey(@"Homescreen.FPS", 30), ^{
+    LGStartDisplayLinkStateWithPreferenceKey(&sContextMenuDisplayLinkState,
+                                             LGPreferredFramesPerSecondForKey(@"Homescreen.FPS", 30),
+                                             @"DisplayLink.ContextMenu.Enabled",
+                                             ^{
         if (LG_prefersLiveCapture(@"ContextMenu.RenderingMode")) LGContextMenuRefreshAllHosts();
         else LG_updateRegisteredGlassViews(LGUpdateGroupContextMenu);
     });

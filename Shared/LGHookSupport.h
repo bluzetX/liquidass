@@ -13,6 +13,7 @@ typedef struct {
     NSInteger activeCount;
     NSInteger preferredFPS;
     CFTimeInterval lastTickTimestamp;
+    __strong NSString *enabledPreferenceKey;
     __strong CADisplayLink *link;
     __strong id driver;
 } LGDisplayLinkState;
@@ -37,6 +38,10 @@ void LGStopDisplayLink(CADisplayLink *__strong *linkStorage,
 void LGStartDisplayLinkState(LGDisplayLinkState *state,
                              NSInteger preferredFPS,
                              dispatch_block_t tickBlock);
+void LGStartDisplayLinkStateWithPreferenceKey(LGDisplayLinkState *state,
+                                              NSInteger preferredFPS,
+                                              NSString *enabledPreferenceKey,
+                                              dispatch_block_t tickBlock);
 void LGStopDisplayLinkState(LGDisplayLinkState *state);
 void LGDisplayLinkStateDidChangeActivity(LGDisplayLinkState *state);
 void LGSetDisplayLinkStatePreferredFPS(LGDisplayLinkState *state, NSInteger preferredFPS);

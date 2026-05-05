@@ -98,6 +98,8 @@
 "prefs.section.experimental_rendering.subtitle" = "Chọn ảnh chụp hoặc chụp nền trực tiếp cho từng bề mặt. Mục này mang tính thử nghiệm và có thể khá nặng. Tôi không khuyến nghị bạn thay đổi bất cứ thứ gì bên dưới.";
 "prefs.section.surface_tint_override.title" = "Ghi đè tint theo bề mặt";
 "prefs.section.surface_tint_override.subtitle" = "Ghi đè chế độ tint cho từng bề mặt riêng. Theo hệ thống sẽ dùng giao diện hiện tại của hệ thống.";
+"prefs.section.display_link_toggle.title" = "Bật/tắt Display-Link thủ công";
+"prefs.section.display_link_toggle.subtitle" = "Chọn bề mặt nào được phép dùng display link để cập nhật glass.";
 
 "prefs.button.reset" = "Đặt lại";
 "prefs.button.reset_all" = "Đặt lại tất cả";
@@ -161,6 +163,8 @@
 "prefs.misc.language.subtitle" = "Chọn ngôn ngữ cho giao diện tuỳ chọn này.";
 "prefs.misc.app_library_composite.title" = "AL lấy mẫu cả icon app";
 "prefs.misc.app_library_composite.subtitle" = "Trong App Library sẽ lấy mẫu cả icon ở Homescreen chứ không chỉ wallpaper.";
+"prefs.misc.display_link_toggle.subtitle" = "Hiện các điều khiển display link riêng cho từng bề mặt có dùng chúng.";
+"prefs.misc.display_link_surface.subtitle" = "Cho phép bề mặt này dùng display link để cập nhật glass.";
 "prefs.misc.debug_logging.title" = "Ghi nhật ký gỡ lỗi";
 "prefs.misc.debug_logging.subtitle" = "Bật log chẩn đoán chi tiết được ghi vào /tmp/LiquidAss.log";
 "prefs.misc.debug_profiling.title" = "Hồ sơ hiệu năng";

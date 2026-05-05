@@ -15,28 +15,6 @@ static void *kAppIconLastGlassFrameKey = &kAppIconLastGlassFrameKey;
 static void *kAppIconBackdropViewKey = &kAppIconBackdropViewKey;
 static const CGFloat kAppIconImageScale = 0.99;
 
-static BOOL LGTouchPassThroughViewLooksLikePlainIconHost(UIView *touchPassView, UIView *iconImageView) {
-    if (!touchPassView || !iconImageView) return NO;
-    BOOL hasImageView = NO;
-    BOOL hasLabelView = NO;
-    for (UIView *subview in touchPassView.subviews) {
-        if (subview == iconImageView) {
-            hasImageView = YES;
-            continue;
-        }
-        if (subview == objc_getAssociatedObject(touchPassView, kAppIconGlassKey)) continue;
-        if (subview == objc_getAssociatedObject(touchPassView, kAppIconTintKey)) continue;
-
-        NSString *className = NSStringFromClass(subview.class);
-        if ([className isEqualToString:@"SBIconLegibilityLabelView"]) {
-            hasLabelView = YES;
-            continue;
-        }
-        return NO;
-    }
-    return hasImageView && hasLabelView;
-}
-
 LG_ENABLED_BOOL_PREF_FUNC(LGAppIconsEnabled, "AppIcons.Enabled", NO)
 LG_FLOAT_PREF_FUNC(LGAppIconCornerRadius, "AppIcons.CornerRadius", 13.5)
 LG_FLOAT_PREF_FUNC(LGAppIconBezelWidth, "AppIcons.BezelWidth", 14.0)
@@ -54,18 +32,21 @@ static BOOL LGIsHomescreenIconImageView(UIView *view) {
     if (![NSStringFromClass(view.class) isEqualToString:@"SBIconImageView"]) return NO;
     if (LGResponderChainContainsClassNamed(view, @"SBFolderViewController")) return NO;
     if (LGResponderChainContainsClassNamed(view, @"SBAppLibraryViewController")) return NO;
+    if (LGResponderChainContainsClassNamed(view, @"SBHWidgetStackViewController")) return NO;
+    if (LGHasAncestorClassNamed(view, @"SBHWidgetContainerView")) return NO;
+    if (LGHasAncestorClassNamed(view, @"BSUIScrollView")) return NO;
 
     UIView *parent = view.superview;
     if (!parent) return NO;
     if (![NSStringFromClass(parent.class) isEqualToString:@"SBFTouchPassThroughView"]) return NO;
+    if (LGResponderChainContainsClassNamed(parent, @"SBHWidgetStackViewController")) return NO;
     UIView *grandparent = parent.superview;
     if (!grandparent) return NO;
     if (![NSStringFromClass(grandparent.class) isEqualToString:@"SBIconView"]) return NO;
+    if (LGResponderChainContainsClassNamed(grandparent, @"SBHWidgetStackViewController")) return NO;
     UIView *iconListView = grandparent.superview;
     if (!iconListView) return NO;
     if (![NSStringFromClass(iconListView.class) isEqualToString:@"SBIconListView"]) return NO;
-    if (grandparent.subviews.count != 1 || grandparent.subviews.firstObject != parent) return NO;
-    if (!LGTouchPassThroughViewLooksLikePlainIconHost(parent, view)) return NO;
     BOOL hasMaterialSibling = NO;
     for (UIView *sibling in iconListView.subviews) {
         if (sibling == grandparent) continue;
@@ -115,7 +96,8 @@ static void removeAppIconOverlays(UIView *view) {
 
 static void ensureAppIconTintOverlay(UIView *view) {
     UIView *host = LGAppIconHostView(view);
-    CGRect frame = LGAppIconGlassFrameInHost(view, host);
+    UIView *overlayHost = objc_getAssociatedObject(view, kAppIconOverlayHostKey);
+    CGRect frame = (host == overlayHost) ? host.bounds : LGAppIconGlassFrameInHost(view, host);
     UIView *tint = LGEnsureTintOverlayView(host,
                                            kAppIconTintKey,
                                            kAppIconTintTag,
@@ -129,7 +111,9 @@ static void ensureAppIconTintOverlay(UIView *view) {
     if (@available(iOS 13.0, *)) {
         tint.layer.cornerCurve = kCACornerCurveContinuous;
     }
-    [host insertSubview:tint belowSubview:view];
+    LiquidGlassView *glass = objc_getAssociatedObject(host, kAppIconGlassKey);
+    if (glass) [host insertSubview:tint aboveSubview:glass];
+    else [host bringSubviewToFront:tint];
 }
 
 static void injectIntoAppIcon(UIView *view) {

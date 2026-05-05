@@ -163,7 +163,10 @@ static void LGScheduleFocusResanitize(UIView *view) {
 static void startAppLibDisplayLink(void) {
     if (!LGAnyAppLibraryGlassEnabled()) return;
     sAppLibraryDisplayLinkState.activeCount = 1;
-    LGStartDisplayLinkState(&sAppLibraryDisplayLinkState, LGPreferredFramesPerSecondForKey(@"AppLibrary.FPS", 30), ^{
+    LGStartDisplayLinkStateWithPreferenceKey(&sAppLibraryDisplayLinkState,
+                                             LGPreferredFramesPerSecondForKey(@"AppLibrary.FPS", 30),
+                                             @"DisplayLink.AppLibrary.Enabled",
+                                             ^{
         if (LG_prefersLiveCapture(@"AppLibrary.RenderingMode") ||
             LG_prefersLiveCapture(@"AppLibrary.Search.RenderingMode")) {
             LGAppLibraryRefreshAllHosts();

@@ -95,6 +95,8 @@
 "prefs.section.experimental_rendering.subtitle" = "为每个界面选择快照或实时捕捉。此为实验性功能，可能消耗较多资源。我不建议你改动下面的任何内容";
 "prefs.section.surface_tint_override.title" = "按界面单独覆盖色调";
 "prefs.section.surface_tint_override.subtitle" = "为单个界面覆盖色调模式。跟随系统将使用当前系统外观";
+"prefs.section.display_link_toggle.title" = "Manual Display-Link Toggle";
+"prefs.section.display_link_toggle.subtitle" = "Choose which surfaces are allowed to run display-link driven glass updates.";
 
 "prefs.button.reset" = "重置";
 "prefs.button.reset_all" = "Reset all";
@@ -158,6 +160,8 @@
 "prefs.misc.experimental.subtitle" = "渲染方式及实验性功能";
 "prefs.misc.app_library_composite.title" = "资源库示例图标";
 "prefs.misc.app_library_composite.subtitle" = "在资源库中同时采样主屏幕图标，而不仅是壁纸";
+"prefs.misc.display_link_toggle.subtitle" = "Show individual display-link controls for surfaces that use them.";
+"prefs.misc.display_link_surface.subtitle" = "Allow this surface to run display-link driven glass updates.";
 "prefs.misc.debug_logging.title" = "调试日志";
 "prefs.misc.debug_logging.subtitle" = "启用写入 /tmp/LiquidAss.log 的详细诊断日志";
 "prefs.misc.debug_profiling.title" = "Debug Profiling";

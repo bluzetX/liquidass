@@ -107,7 +107,10 @@ static NSString *LGDockModeName(LGDockMode mode) {
 }
 
 static void startDockDisplayLink(void) {
-    LGStartDisplayLinkState(&sDockDisplayLinkState, LGPreferredFramesPerSecondForKey(@"Homescreen.FPS", 30), ^{
+    LGStartDisplayLinkStateWithPreferenceKey(&sDockDisplayLinkState,
+                                             LGPreferredFramesPerSecondForKey(@"Homescreen.FPS", 30),
+                                             @"DisplayLink.Dock.Enabled",
+                                             ^{
         if (LG_prefersLiveCapture(@"Dock.RenderingMode")) LGDockRefreshAllHosts();
         else LG_updateRegisteredGlassViews(LGUpdateGroupDock);
     });

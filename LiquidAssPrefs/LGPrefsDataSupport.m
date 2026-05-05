@@ -523,6 +523,26 @@ static NSArray<NSDictionary *> *LGPerSurfaceTintOverrideItems(void) {
     ];
 }
 
+static NSDictionary *LGDisplayLinkSurfaceSwitch(NSString *key, NSString *title) {
+    return LGSwitchSetting(key,
+                           title ?: @"",
+                           LGLocalized(@"prefs.misc.display_link_surface.subtitle"),
+                           YES);
+}
+
+static NSArray<NSDictionary *> *LGPerSurfaceDisplayLinkItems(void) {
+    return @[
+        LGDisplayLinkSurfaceSwitch(@"DisplayLink.Dock.Enabled", LGLocalized(@"prefs.section.dock.title")),
+        LGDisplayLinkSurfaceSwitch(@"DisplayLink.FolderOpen.Enabled", LGLocalized(@"prefs.section.folder_open.title")),
+        LGDisplayLinkSurfaceSwitch(@"DisplayLink.ContextMenu.Enabled", LGLocalized(@"prefs.section.context_menu.title")),
+        LGDisplayLinkSurfaceSwitch(@"DisplayLink.Banner.Enabled", LGLocalized(@"prefs.section.banner.title")),
+        LGDisplayLinkSurfaceSwitch(@"DisplayLink.Widgets.Enabled", LGLocalized(@"prefs.section.widgets.title")),
+        LGDisplayLinkSurfaceSwitch(@"DisplayLink.AppLibrary.Enabled", LGLocalized(@"prefs.surface.app_library.title")),
+        LGDisplayLinkSurfaceSwitch(@"DisplayLink.Lockscreen.Enabled", LGLocalized(@"prefs.surface.lockscreen.title")),
+        LGDisplayLinkSurfaceSwitch(@"DisplayLink.LockscreenClock.Enabled", LGLocalized(@"prefs.section.lockscreen_clock.title")),
+    ];
+}
+
 NSDictionary *LGGlassRefractiveIndexSetting(NSString *key, CGFloat fallback, CGFloat min, CGFloat max, NSInteger decimals) {
     return LGSliderSetting(key, LGLocalized(@"prefs.control.refractive_index"), LGLocalized(@"prefs.subtitle.refractive_index"), fallback, min, kLGUniversalRefractiveIndexMax, decimals);
 }
@@ -1233,6 +1253,22 @@ NSArray<NSDictionary *> *LGMoreOptionsItems(void) {
 
     if ([LGReadPreference(@"Tint.Override.PerSurfaceEnabled", @NO) boolValue]) {
         [items addObjectsFromArray:LGPerSurfaceTintOverrideItems()];
+    }
+
+    [items addObject:LGSectionSetting(@"", @"")];
+    [items addObject:LGSectionSetting(LGLocalized(@"prefs.section.display_link_toggle.title"),
+                                      LGLocalized(@"prefs.section.display_link_toggle.subtitle"))];
+    [items addObject:({
+        NSMutableDictionary *item = [LGSwitchSetting(@"DisplayLink.PerSurfaceEnabled",
+                                                     LGLocalized(@"prefs.control.enabled"),
+                                                     LGLocalized(@"prefs.misc.display_link_toggle.subtitle"),
+                                                     NO) mutableCopy];
+        item[@"controls_following_panel"] = @YES;
+        [item copy];
+    })];
+
+    if ([LGReadPreference(@"DisplayLink.PerSurfaceEnabled", @NO) boolValue]) {
+        [items addObjectsFromArray:LGPerSurfaceDisplayLinkItems()];
     }
 
     [items addObject:LGSectionSetting(@"", @"")];

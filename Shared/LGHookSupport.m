@@ -165,8 +165,17 @@ static NSInteger LGSharedDisplayLinkMaximumFPS(void) {
     return maxFPS > 0 ? maxFPS : 60;
 }
 
+static BOOL LGDisplayLinkStatePreferenceAllowsUpdates(LGDisplayLinkState *state) {
+    if (!state) return NO;
+    if (!LG_prefBool(@"DisplayLink.PerSurfaceEnabled", NO)) return YES;
+    NSString *key = state->enabledPreferenceKey;
+    if (!key.length) return YES;
+    return LG_prefBool(key, YES);
+}
+
 static BOOL LGDisplayLinkStateIsActive(LGDisplayLinkState *state) {
     if (!state || state->link != sSharedDisplayLink) return NO;
+    if (!LGDisplayLinkStatePreferenceAllowsUpdates(state)) return NO;
     return state->activeCount > 0;
 }
 
@@ -222,6 +231,12 @@ static void LGReconfigureSharedDisplayLinkFPS(void) {
 @end
 
 static void LGEnsureSharedDisplayLink(void) {
+    static dispatch_once_t prefsOnceToken;
+    dispatch_once(&prefsOnceToken, ^{
+        LGObservePreferenceChanges(^{
+            LGReconfigureSharedDisplayLinkFPS();
+        });
+    });
     if (!sSharedDisplayLinkStates) {
         sSharedDisplayLinkStates = [NSMutableArray array];
     }
@@ -260,12 +275,20 @@ void LGStopDisplayLink(CADisplayLink *__strong *linkStorage,
 void LGStartDisplayLinkState(LGDisplayLinkState *state,
                              NSInteger preferredFPS,
                              dispatch_block_t tickBlock) {
+    LGStartDisplayLinkStateWithPreferenceKey(state, preferredFPS, nil, tickBlock);
+}
+
+void LGStartDisplayLinkStateWithPreferenceKey(LGDisplayLinkState *state,
+                                              NSInteger preferredFPS,
+                                              NSString *enabledPreferenceKey,
+                                              dispatch_block_t tickBlock) {
     LGAssertMainThread();
     if (!state) return;
     if (state->link) return;
     LGEnsureSharedDisplayLink();
     LGDisplayLinkDriver *driver = [[LGDisplayLinkDriver alloc] initWithTickBlock:tickBlock];
     state->driver = driver;
+    state->enabledPreferenceKey = [enabledPreferenceKey copy];
     state->preferredFPS = MIN(MAX(preferredFPS, 1), LGSharedDisplayLinkMaximumFPS());
     state->lastTickTimestamp = 0.0;
     state->link = sSharedDisplayLink;
@@ -285,6 +308,7 @@ void LGStopDisplayLinkState(LGDisplayLinkState *state) {
     }
     state->link = nil;
     state->driver = nil;
+    state->enabledPreferenceKey = nil;
     state->preferredFPS = 0;
     state->lastTickTimestamp = 0.0;
     LGReconfigureSharedDisplayLinkFPS();

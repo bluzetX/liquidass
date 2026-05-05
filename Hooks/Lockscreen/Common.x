@@ -81,7 +81,10 @@ static void LGEnsureLockscreenTintOverlay(UIView *host,
 
 static void LGStartLockDisplayLink(void) {
     if (!LGLockscreenEnabled() && !LGLockscreenQuickActionsFeatureEnabled()) return;
-    LGStartDisplayLinkState(&sLockDisplayLinkState, LGPreferredFramesPerSecondForKey(@"Lockscreen.FPS", 30), ^{
+    LGStartDisplayLinkStateWithPreferenceKey(&sLockDisplayLinkState,
+                                             LGPreferredFramesPerSecondForKey(@"Lockscreen.FPS", 30),
+                                             @"DisplayLink.Lockscreen.Enabled",
+                                             ^{
         if (LG_prefersLiveCapture(@"Lockscreen.RenderingMode") ||
             LG_prefersLiveCapture(@"LockscreenQuickActions.RenderingMode")) {
             LGLockscreenRefreshAllHosts();

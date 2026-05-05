@@ -48,6 +48,8 @@
 "prefs.misc.about.title"="更多選項";
 "prefs.misc.app_library_composite.subtitle"="在 App 資料庫中同時採樣主畫面圖示，而不僅是背景圖片";
 "prefs.misc.app_library_composite.title"="資料庫合成圖示";
+"prefs.misc.display_link_toggle.subtitle"="Show individual display-link controls for surfaces that use them.";
+"prefs.misc.display_link_surface.subtitle"="Allow this surface to run display-link driven glass updates.";
 "prefs.misc.debug_logging.subtitle"="啟用寫入 /tmp/LiquidAss.log 的詳細診斷記錄";
 "prefs.misc.debug_logging.title"="除錯記錄";
 "prefs.misc.debug_profiling.title"="Debug Profiling";
@@ -102,6 +104,8 @@
 "prefs.section.dock.title"="Dock";
 "prefs.section.experimental_rendering.subtitle"="為各個介面選擇快照或即時擷取。此為實驗性功能，可能較耗效能。我不建議你更動下方任何內容。";
 "prefs.section.experimental_rendering.title"="算繪方式";
+"prefs.section.display_link_toggle.title"="Manual Display-Link Toggle";
+"prefs.section.display_link_toggle.subtitle"="Choose which surfaces are allowed to run display-link driven glass updates.";
 "prefs.section.folder_icons.subtitle"="關閉狀態下的檔案夾圖示材質、色調、算繪品質等";
 "prefs.section.folder_icons.title"="檔案夾圖示";
 "prefs.section.folder_open.subtitle"="開啟狀態下的檔案夾材質、算繪、品質等";

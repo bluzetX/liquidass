@@ -952,7 +952,8 @@ static BOOL LGItemVisibleForCurrentPreferences(NSDictionary *item) {
             LGWritePreferenceAndMaybeRequireRespring(item[@"key"], @(sender.isOn));
             [self handleRespringStateChanged:nil];
         }
-        if ([item[@"key"] isEqualToString:@"Tint.Override.PerSurfaceEnabled"]) {
+        if ([item[@"key"] isEqualToString:@"Tint.Override.PerSurfaceEnabled"] ||
+            [item[@"key"] isEqualToString:@"DisplayLink.PerSurfaceEnabled"]) {
             [self reloadLocalizedContent];
             [self reloadVisibleSettings];
         }

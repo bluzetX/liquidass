@@ -132,6 +132,8 @@
 "prefs.section.experimental_rendering.subtitle" = "Choose snapshot or live capture for each surface. This is experimental and can be heavy. I do not recommend you to change anything below.";
 "prefs.section.surface_tint_override.title" = "Per-Surface Tint Override";
 "prefs.section.surface_tint_override.subtitle" = "Override tint mode for individual surfaces. Follow System uses the current system appearance.";
+"prefs.section.display_link_toggle.title" = "Manual Display-Link Toggle";
+"prefs.section.display_link_toggle.subtitle" = "Choose which surfaces are allowed to run display-link driven glass updates.";
 
 "prefs.button.reset" = "Reset";
 "prefs.button.reset_all" = "Reset all";
@@ -201,6 +203,8 @@
 "prefs.misc.language.subtitle" = "Select the language for this preferences UI.";
 "prefs.misc.app_library_composite.title" = "AL samples app icons";
 "prefs.misc.app_library_composite.subtitle" = "Also samples homescreen icons and not just the wallpaper in App Library.";
+"prefs.misc.display_link_toggle.subtitle" = "Show individual display-link controls for surfaces that use them.";
+"prefs.misc.display_link_surface.subtitle" = "Allow this surface to run display-link driven glass updates.";
 "prefs.misc.debug_logging.title" = "Debug Logging";
 "prefs.misc.debug_logging.subtitle" = "Enable verbose diagnostic logs written to /tmp/LiquidAss.log";
 "prefs.misc.debug_profiling.title" = "Debug Profiling";

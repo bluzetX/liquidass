@@ -51,9 +51,10 @@ static BOOL LGHasBannerPresentationContext(UIView *view) {
 static void LGStartBannerDisplayLink(void) {
     LGAssertMainThread();
     if (sBannerDisplayLinkState.link || !LGBannerEnabled()) return;
-    LGStartDisplayLinkState(&sBannerDisplayLinkState,
-                            LGPreferredFramesPerSecondForKey(@"Homescreen.FPS", 30),
-                            ^{
+    LGStartDisplayLinkStateWithPreferenceKey(&sBannerDisplayLinkState,
+                                             LGPreferredFramesPerSecondForKey(@"Homescreen.FPS", 30),
+                                             @"DisplayLink.Banner.Enabled",
+                                             ^{
         LGRefreshBannerPlatterHosts();
     });
 }

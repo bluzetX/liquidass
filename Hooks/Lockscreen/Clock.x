@@ -732,9 +732,10 @@ static void LGRelayoutLegacyNotificationListForController(UIViewController *cont
 static void LGStartClockDisplayLink(void) {
     LGAssertMainThread();
     if (sClockDisplayLinkState.link || !LGClockEnabled()) return;
-    LGStartDisplayLinkState(&sClockDisplayLinkState,
-                            LGClockActiveDisplayFPS(),
-                            ^{
+    LGStartDisplayLinkStateWithPreferenceKey(&sClockDisplayLinkState,
+                                             LGClockActiveDisplayFPS(),
+                                             @"DisplayLink.LockscreenClock.Enabled",
+                                             ^{
         for (UIView *host in LGClockHostRegistry().allObjects) {
             if (!host.window || !LGClockViewIsVisiblyPresent(host)) {
                 LGApplyClockReplacement(host);
