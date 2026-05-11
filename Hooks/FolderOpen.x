@@ -60,7 +60,7 @@ LG_FLOAT_PREF_FUNC(LGFolderOpenBlur, "FolderOpen.Blur", 15.0)
 LG_FLOAT_PREF_FUNC(LGFolderOpenWallpaperScale, "FolderOpen.WallpaperScale", 0.1)
 LG_FLOAT_PREF_FUNC(LGFolderOpenLightTintAlpha, "FolderOpen.LightTintAlpha", 0.1)
 LG_FLOAT_PREF_FUNC(LGFolderOpenDarkTintAlpha, "FolderOpen.DarkTintAlpha", 0.0)
-LG_FLOAT_PREF_FUNC(LGFolderOpenLiveCaptureFPS, "FolderOpen.LiveCaptureFPS", 12.0)
+LG_FLOAT_PREF_FUNC(LGFolderOpenLiveCaptureFPS, "FolderOpen.LiveCaptureFPS", 22.0)
 
 static NSHashTable<UIView *> *LGFolderOpenHostRegistry(void) {
     if (!sFolderOpenHosts) {

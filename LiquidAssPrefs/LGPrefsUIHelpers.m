@@ -1,6 +1,7 @@
 #import "LGPrefsUIHelpers.h"
 #import "LGPrefsDataSupport.h"
 #import "../Shared/LGBackButtonSupport.h"
+#import "../Shared/LGBannerCaptureSupport.h"
 #import "../Shared/LGGlassRenderer.h"
 #import "../Shared/LGSharedSupport.h"
 #import <notify.h>
@@ -59,14 +60,23 @@ void * const kLGControlledByEnabledKey = (void *)&kLGControlledByEnabledKey;
 @end
 
 static UIView *LGMakeRespringBar(id target, SEL respringAction, SEL laterAction);
+static void *kLGRespringBarGlassViewKey = &kLGRespringBarGlassViewKey;
+static void *kLGRespringBarBlurViewKey = &kLGRespringBarBlurViewKey;
+static void *kLGRespringBarBackdropViewKey = &kLGRespringBarBackdropViewKey;
+static void *kLGRespringBarLiveReadyKey = &kLGRespringBarLiveReadyKey;
 static NSNumber *LGParseLocalizedDecimalString(NSString *rawText);
 static void LGDismissOverlayPanel(UIView *overlay, UIView *panel);
 
-void LGApplyNavigationBarAppearance(UINavigationItem *navigationItem) {
+static UINavigationBarAppearance *LGMakePrefsTransparentNavigationAppearance(void) {
     UINavigationBarAppearance *appearance = [[UINavigationBarAppearance alloc] init];
     [appearance configureWithTransparentBackground];
     appearance.backgroundColor = UIColor.clearColor;
     appearance.shadowColor = UIColor.clearColor;
+    return appearance;
+}
+
+void LGApplyNavigationBarAppearance(UINavigationItem *navigationItem) {
+    UINavigationBarAppearance *appearance = LGMakePrefsTransparentNavigationAppearance();
     navigationItem.standardAppearance = appearance;
     navigationItem.scrollEdgeAppearance = appearance;
     navigationItem.compactAppearance = appearance;
@@ -99,10 +109,13 @@ void LGInstallScrollableStack(UIViewController *controller,
         [stackView.leadingAnchor constraintEqualToAnchor:scrollView.frameLayoutGuide.leadingAnchor constant:16.0],
         [stackView.trailingAnchor constraintEqualToAnchor:scrollView.frameLayoutGuide.trailingAnchor constant:-16.0],
         [stackView.bottomAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.bottomAnchor constant:-112.0],
+    ]];
+
+    [NSLayoutConstraint activateConstraints:@[
         [fadeView.topAnchor constraintEqualToAnchor:controller.view.topAnchor],
         [fadeView.leadingAnchor constraintEqualToAnchor:controller.view.leadingAnchor],
         [fadeView.trailingAnchor constraintEqualToAnchor:controller.view.trailingAnchor],
-        [fadeView.heightAnchor constraintEqualToConstant:100.0],
+        [fadeView.bottomAnchor constraintEqualToAnchor:controller.view.safeAreaLayoutGuide.topAnchor constant:16.0],
     ]];
 
     if (scrollViewOut) *scrollViewOut = scrollView;
@@ -119,6 +132,56 @@ void LGInstallBottomRespringBar(UIViewController *controller, UIView *__strong *
         [respringBar.bottomAnchor constraintEqualToAnchor:guide.bottomAnchor constant:-12.0],
     ]];
     if (respringBarOut) *respringBarOut = respringBar;
+}
+
+void LGRefreshRespringBarGlass(UIView *respringBar) {
+    if (!respringBar) return;
+    LGSharedGlassView *glassView = objc_getAssociatedObject(respringBar, kLGRespringBarGlassViewKey);
+    UIView *blurView = objc_getAssociatedObject(respringBar, kLGRespringBarBlurViewKey);
+    BOOL glassEnabled = [LGReadPreference(@"Preferences.RespringBar.Enabled", @NO) boolValue];
+    BOOL liveReady = [objc_getAssociatedObject(respringBar, kLGRespringBarLiveReadyKey) boolValue];
+    glassView.hidden = !glassEnabled || !liveReady;
+    blurView.hidden = glassEnabled && liveReady;
+    LGApplyLowBlurRadiusToView(blurView);
+    if (!glassEnabled) {
+        objc_setAssociatedObject(respringBar, kLGRespringBarLiveReadyKey, @NO, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        LGRemoveLiveBackdropCaptureView(respringBar, kLGRespringBarBackdropViewKey);
+        return;
+    }
+    if (!respringBar.window || respringBar.hidden || CGRectIsEmpty(respringBar.bounds)) return;
+
+    CGPoint captureOrigin = CGPointZero;
+    CGSize samplingResolution = CGSizeZero;
+    if (LGCaptureLiveBackdropTextureForHost(respringBar,
+                                            glassView,
+                                            kLGRespringBarBackdropViewKey,
+                                            &captureOrigin,
+                                            &samplingResolution)) {
+        objc_setAssociatedObject(respringBar, kLGRespringBarLiveReadyKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        glassView.hidden = NO;
+        blurView.hidden = YES;
+        glassView.wallpaperOrigin = captureOrigin;
+        glassView.wallpaperSamplingResolution = samplingResolution;
+        [glassView updateOrigin];
+        [glassView scheduleDraw];
+    }
+}
+
+void LGScheduleRespringBarGlassRefresh(UIView *respringBar) {
+    if (!respringBar) return;
+    LGRefreshRespringBarGlass(respringBar);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        LGRefreshRespringBarGlass(respringBar);
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        LGRefreshRespringBarGlass(respringBar);
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.18 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        LGRefreshRespringBarGlass(respringBar);
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        LGRefreshRespringBarGlass(respringBar);
+    });
 }
 
 void LGPresentSliderValuePrompt(UIViewController *controller, UILabel *valueLabel) {
@@ -279,39 +342,49 @@ UIBarButtonItem *LGMakeCircularBackItem(id target, SEL action) {
     return [[UIBarButtonItem alloc] initWithCustomView:container];
 }
 
+UIBarButtonItem *LGMakeCircularResetItem(id target, SEL action) {
+    LGSharedBackButtonView *container = [[LGSharedBackButtonView alloc] initWithTarget:target
+                                                                                action:action
+                                                                            symbolName:@"arrow.counterclockwise"];
+    container.accessibilityLabel = LGLocalized(@"prefs.button.reset");
+    return [[UIBarButtonItem alloc] initWithCustomView:container];
+}
+
 void LGRefreshCircularBackItem(UIBarButtonItem *item) {
     UIView *customView = item.customView;
     if ([customView isKindOfClass:[LGSharedBackButtonView class]]) {
+        [(LGSharedBackButtonView *)customView setGlassEnabled:LGReadPreference(@"Preferences.BackButton.Enabled", @NO).boolValue];
         [(LGSharedBackButtonView *)customView refreshBackdropAfterScreenUpdates:NO];
     }
 }
 
-UIBarButtonItem *LGMakeResetTextItem(id target, SEL action) {
-    return [[UIBarButtonItem alloc] initWithTitle:LGLocalized(@"prefs.button.reset")
-                                            style:UIBarButtonItemStylePlain
-                                           target:target
-                                           action:action];
-}
-
-UIBarButtonItem *LGMakeTextBarButtonItem(NSString *title, id target, SEL action) {
-    return [[UIBarButtonItem alloc] initWithTitle:(title.length ? title : LGLocalized(@"prefs.button.reset"))
-                                            style:UIBarButtonItemStylePlain
-                                           target:target
-                                           action:action];
-}
-
 @implementation LGTopFadeView {
-    CAGradientLayer *_gradientLayer;
+    UIView *_blurView;
+    CAGradientLayer *_blurMaskLayer;
+    CAGradientLayer *_tintLayer;
 }
 
 - (void)lg_updateGradientColors {
+    UIColor *maskColor = UIColor.blackColor;
+    _blurMaskLayer.colors = @[
+        (__bridge id)[maskColor colorWithAlphaComponent:1.0].CGColor,
+        (__bridge id)[maskColor colorWithAlphaComponent:0.96].CGColor,
+        (__bridge id)[maskColor colorWithAlphaComponent:0.78].CGColor,
+        (__bridge id)[maskColor colorWithAlphaComponent:0.34].CGColor,
+        (__bridge id)[maskColor colorWithAlphaComponent:0.10].CGColor,
+        (__bridge id)[maskColor colorWithAlphaComponent:0.0].CGColor
+    ];
+    _blurMaskLayer.locations = @[ @0.0, @0.34, @0.62, @0.82, @0.94, @1.0 ];
+
     UIColor *baseColor = [UIColor systemBackgroundColor];
-    _gradientLayer.colors = @[
-        (__bridge id)[baseColor colorWithAlphaComponent:0.98].CGColor,
-        (__bridge id)[baseColor colorWithAlphaComponent:0.55].CGColor,
+    _tintLayer.colors = @[
+        (__bridge id)[baseColor colorWithAlphaComponent:0.86].CGColor,
+        (__bridge id)[baseColor colorWithAlphaComponent:0.74].CGColor,
+        (__bridge id)[baseColor colorWithAlphaComponent:0.42].CGColor,
+        (__bridge id)[baseColor colorWithAlphaComponent:0.14].CGColor,
         (__bridge id)[baseColor colorWithAlphaComponent:0.0].CGColor
     ];
-    _gradientLayer.locations = @[ @0.0, @0.45, @1.0 ];
+    _tintLayer.locations = @[ @0.0, @0.36, @0.68, @0.90, @1.0 ];
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -319,17 +392,32 @@ UIBarButtonItem *LGMakeTextBarButtonItem(NSString *title, id target, SEL action)
     if (!self) return nil;
     self.userInteractionEnabled = NO;
     self.backgroundColor = UIColor.clearColor;
-    _gradientLayer = [CAGradientLayer layer];
-    _gradientLayer.startPoint = CGPointMake(0.5, 0.0);
-    _gradientLayer.endPoint = CGPointMake(0.5, 1.0);
-    [self.layer addSublayer:_gradientLayer];
+    _blurView = LGMakeLowBlurFallbackView();
+    _blurView.userInteractionEnabled = NO;
+    _blurView.frame = self.bounds;
+    _blurView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self addSubview:_blurView];
+    LGApplyLowBlurRadiusToView(_blurView);
+
+    _blurMaskLayer = [CAGradientLayer layer];
+    _blurMaskLayer.startPoint = CGPointMake(0.5, 0.0);
+    _blurMaskLayer.endPoint = CGPointMake(0.5, 1.0);
+    _blurView.layer.mask = _blurMaskLayer;
+
+    _tintLayer = [CAGradientLayer layer];
+    _tintLayer.startPoint = CGPointMake(0.5, 0.0);
+    _tintLayer.endPoint = CGPointMake(0.5, 1.0);
+    [self.layer addSublayer:_tintLayer];
     [self lg_updateGradientColors];
     return self;
 }
 
 - (void)layoutSubviews {
     [super layoutSubviews];
-    _gradientLayer.frame = self.bounds;
+    _blurView.frame = self.bounds;
+    _blurMaskLayer.frame = self.bounds;
+    _tintLayer.frame = self.bounds;
+    LGApplyLowBlurRadiusToView(_blurView);
 }
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
@@ -1154,11 +1242,28 @@ static UIView *LGMakeRespringBar(id target, SEL respringAction, SEL laterAction)
     card.hidden = YES;
     card.transform = CGAffineTransformMakeTranslation(0.0, 10.0);
 
-    UIBlurEffectStyle blurStyle = UIBlurEffectStyleSystemThinMaterial;
-    UIVisualEffectView *blurView = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:blurStyle]];
+    LGSharedGlassView *glassView = [[LGSharedGlassView alloc] initWithFrame:CGRectZero sourceImage:nil sourceOrigin:CGPointZero];
+    glassView.translatesAutoresizingMaskIntoConstraints = NO;
+    glassView.userInteractionEnabled = NO;
+    glassView.releasesSourceAfterUpload = NO;
+    glassView.bezelWidth = 24.0;
+    glassView.glassThickness = 100.0;
+    glassView.refractionScale = 1.5;
+    glassView.refractiveIndex = 1.5;
+    glassView.specularOpacity = 0.8;
+    glassView.blur = 10.0;
+    glassView.sourceScale = 1.0;
+    glassView.cornerRadius = 26.0;
+    glassView.hidden = YES;
+    [card addSubview:glassView];
+    objc_setAssociatedObject(card, kLGRespringBarGlassViewKey, glassView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+    UIView *blurView = LGMakeLowBlurFallbackView();
     blurView.translatesAutoresizingMaskIntoConstraints = NO;
     blurView.userInteractionEnabled = NO;
     [card addSubview:blurView];
+    LGApplyLowBlurRadiusToView(blurView);
+    objc_setAssociatedObject(card, kLGRespringBarBlurViewKey, blurView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
     UIView *tintView = [[UIView alloc] initWithFrame:CGRectZero];
     tintView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -1209,6 +1314,10 @@ static UIView *LGMakeRespringBar(id target, SEL respringAction, SEL laterAction)
     [laterButton addTarget:target action:laterAction forControlEvents:UIControlEventTouchUpInside];
 
     [NSLayoutConstraint activateConstraints:@[
+        [glassView.topAnchor constraintEqualToAnchor:card.topAnchor],
+        [glassView.leadingAnchor constraintEqualToAnchor:card.leadingAnchor],
+        [glassView.trailingAnchor constraintEqualToAnchor:card.trailingAnchor],
+        [glassView.bottomAnchor constraintEqualToAnchor:card.bottomAnchor],
         [blurView.topAnchor constraintEqualToAnchor:card.topAnchor],
         [blurView.leadingAnchor constraintEqualToAnchor:card.leadingAnchor],
         [blurView.trailingAnchor constraintEqualToAnchor:card.trailingAnchor],
@@ -1245,5 +1354,6 @@ static UIView *LGMakeRespringBar(id target, SEL respringAction, SEL laterAction)
         [laterButton.widthAnchor constraintEqualToConstant:82.0],
         [laterButton.heightAnchor constraintEqualToConstant:28.0],
     ]];
+    LGRefreshRespringBarGlass(card);
     return card;
 }

@@ -20,8 +20,14 @@ static void *kLGClockAttachedKey = &kLGClockAttachedKey;
 static void *kLGClockLegacyNotificationOriginalFrameKey = &kLGClockLegacyNotificationOriginalFrameKey;
 static void *kLGClockLegacyNotificationPendingKey = &kLGClockLegacyNotificationPendingKey;
 static void *kLGClockLegacyNotificationApplyingKey = &kLGClockLegacyNotificationApplyingKey;
+static void *kLGClockLegacyRevealHintPendingKey = &kLGClockLegacyRevealHintPendingKey;
+static void *kLGClockApplyingDateTextKey = &kLGClockApplyingDateTextKey;
+static void *kLGClockOriginalDateTextKey = &kLGClockOriginalDateTextKey;
+static void *kLGClockLastCustomDateTextKey = &kLGClockLastCustomDateTextKey;
 static LGDisplayLinkState sClockDisplayLinkState = {0};
 static NSHashTable<UIView *> *sClockHosts = nil;
+static NSHashTable<UIView *> *sClockNotificationObstacleViews = nil;
+static NSHashTable<UIView *> *sClockLegacyRevealHintViews = nil;
 static CFTimeInterval sClockActiveFPSUntil = 0.0;
 static BOOL sClockCoverSheetVisible = NO;
 static NSInteger LGClockActiveDisplayFPS(void);
@@ -32,6 +38,9 @@ static void LGClockSyncDisplayLinkActivity(void);
 static void LGClockSetCoverSheetVisible(BOOL visible);
 static void LGRefreshRegisteredClockHosts(void);
 static void LGClockCleanupRegisteredHosts(void);
+static void LGClockRegisterNotificationObstacleView(UIView *view);
+static void LGClockRegisterLegacyRevealHintView(UIView *view);
+static void LGScheduleClockRefreshForLegacyRevealHint(UIView *view);
 
 @interface UIView (LGClockDisplayLinkRefresh)
 - (void)refreshForDisplayLink;
@@ -57,6 +66,7 @@ LG_FLOAT_PREF_FUNC(LGClockLegacySizeBoost, "Lockscreen.Clock.LegacySizeBoost", 1
 LG_FLOAT_PREF_FUNC(LGClockLegacyEmbolden, "Lockscreen.Clock.LegacyEmbolden", 0.35)
 LG_FLOAT_PREF_FUNC(LGClockVerticalOffset, "Lockscreen.Clock.VerticalOffset", 0.0)
 LG_FLOAT_PREF_FUNC(LGClockDateVerticalOffset, "Lockscreen.Clock.DateVerticalOffset", 0.0)
+LG_BOOL_PREF_FUNC(LGClockDateFormatEnabled, "Lockscreen.Clock.DateFormat.Enabled", YES)
 
 static NSString * const LGClockLegacyFontStyleCurrent = @"current";
 static NSString * const LGClockLegacyFontStyleRounded = @"rounded";
@@ -81,6 +91,57 @@ static void LGSetLayerTreeOpacity(CALayer *layer, float opacity) {
 static BOOL LGClockEnabled(void) {
     return LG_globalEnabled()
         && LG_prefBool(@"Lockscreen.Clock.Enabled", YES);
+}
+
+static NSHashTable<UIView *> *LGClockNotificationObstacleViews(void) {
+    if (!sClockNotificationObstacleViews) {
+        sClockNotificationObstacleViews = [NSHashTable weakObjectsHashTable];
+    }
+    return sClockNotificationObstacleViews;
+}
+
+static NSHashTable<UIView *> *LGClockLegacyRevealHintViews(void) {
+    if (!sClockLegacyRevealHintViews) {
+        sClockLegacyRevealHintViews = [NSHashTable weakObjectsHashTable];
+    }
+    return sClockLegacyRevealHintViews;
+}
+
+static void LGClockRegisterNotificationObstacleView(UIView *view) {
+    if (!view) return;
+    [LGClockNotificationObstacleViews() addObject:view];
+}
+
+static void LGClockRegisterLegacyRevealHintView(UIView *view) {
+    if (!view) return;
+    [LGClockLegacyRevealHintViews() addObject:view];
+}
+
+static void LGScheduleClockRefreshForLegacyRevealHint(UIView *view) {
+    if (!view || LGIsAtLeastiOS16()) return;
+    LGClockRegisterLegacyRevealHintView(view);
+    if ([objc_getAssociatedObject(view, kLGClockLegacyRevealHintPendingKey) boolValue]) return;
+    objc_setAssociatedObject(view, kLGClockLegacyRevealHintPendingKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        objc_setAssociatedObject(view, kLGClockLegacyRevealHintPendingKey, nil, OBJC_ASSOCIATION_ASSIGN);
+        if (view.window) {
+            LGRefreshRegisteredClockHosts();
+        }
+    });
+}
+
+static void LGClockSeedObstacleRegistriesFromWindow(UIWindow *window) {
+    if (!window) return;
+    LGTraverseViews(window, ^(UIView *view) {
+        NSString *className = NSStringFromClass(view.class);
+        if ([className isEqualToString:@"PLPlatterView"] ||
+            [className isEqualToString:@"NCNotificationShortLookView"] ||
+            [className isEqualToString:@"NCNotificationLongLookView"]) {
+            LGClockRegisterNotificationObstacleView(view);
+        } else if ([className isEqualToString:@"NCNotificationListSectionRevealHintView"]) {
+            LGClockRegisterLegacyRevealHintView(view);
+        }
+    });
 }
 
 static NSString *LGClockRenderingModeKey(void) {
@@ -479,7 +540,12 @@ static BOOL LGIsModernClockDateLabel(UIView *view) {
     return LGHasAncestorClassNamed(view, @"CSProminentSubtitleDateView");
 }
 
-static NSString *LGClockAbbreviatedDateString(void) {
+static NSString *LGClockDateFormatString(void) {
+    NSString *format = LG_prefString(@"Lockscreen.Clock.DateFormat.Format", @"EEE MMM d");
+    return format.length ? format : @"EEE MMM d";
+}
+
+static NSString *LGClockCustomDateString(void) {
     static NSDateFormatter *formatter;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -488,7 +554,7 @@ static NSString *LGClockAbbreviatedDateString(void) {
 
     formatter.locale = [NSLocale autoupdatingCurrentLocale];
     formatter.timeZone = [NSTimeZone localTimeZone];
-    [formatter setLocalizedDateFormatFromTemplate:@"EEE MMM d"];
+    formatter.dateFormat = LGClockDateFormatString();
 
     NSString *text = [formatter stringFromDate:[NSDate date]];
     if (text.length == 0) return text;
@@ -504,16 +570,30 @@ static void LGApplyAbbreviatedDateTextToLabel(UILabel *label) {
     if (!label) return;
     if (!LGIsLegacyClockDateLabel(label) && !LGIsModernClockDateLabel(label)) return;
 
-    static char kLGClockApplyingDateTextKey;
-    if ([objc_getAssociatedObject(label, &kLGClockApplyingDateTextKey) boolValue]) return;
+    if ([objc_getAssociatedObject(label, kLGClockApplyingDateTextKey) boolValue]) return;
 
-    NSString *text = LGClockAbbreviatedDateString();
+    if (!LGClockDateFormatEnabled()) {
+        NSString *originalText = objc_getAssociatedObject(label, kLGClockOriginalDateTextKey);
+        if (originalText.length && ![label.text isEqualToString:originalText]) {
+            objc_setAssociatedObject(label, kLGClockApplyingDateTextKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            label.text = originalText;
+            objc_setAssociatedObject(label, kLGClockApplyingDateTextKey, nil, OBJC_ASSOCIATION_ASSIGN);
+        }
+        return;
+    }
+
+    NSString *text = LGClockCustomDateString();
     if (text.length == 0) return;
     if ([label.text isEqualToString:text]) return;
 
-    objc_setAssociatedObject(label, &kLGClockApplyingDateTextKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    NSString *lastCustomText = objc_getAssociatedObject(label, kLGClockLastCustomDateTextKey);
+    if (label.text.length && ![label.text isEqualToString:lastCustomText]) {
+        objc_setAssociatedObject(label, kLGClockOriginalDateTextKey, label.text, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    }
+    objc_setAssociatedObject(label, kLGClockLastCustomDateTextKey, text, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(label, kLGClockApplyingDateTextKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     label.text = text;
-    objc_setAssociatedObject(label, &kLGClockApplyingDateTextKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(label, kLGClockApplyingDateTextKey, nil, OBJC_ASSOCIATION_ASSIGN);
 }
 
 static void LGApplyAbbreviatedDateTextInView(UIView *root) {
@@ -978,6 +1058,12 @@ static BOOL LGClockIsNotificationObstacleView(UIView *view) {
         || [className isEqualToString:@"NCNotificationLongLookView"];
 }
 
+static BOOL LGClockIsLegacyRevealHintObstacleView(UIView *view) {
+    if (LGIsAtLeastiOS16()) return NO;
+    if (!LGClockViewIsVisiblyPresent(view)) return NO;
+    return [NSStringFromClass(view.class) isEqualToString:@"NCNotificationListSectionRevealHintView"];
+}
+
 static BOOL LGClockLegacyObstacleFrameLooksLikeNotificationCard(UIView *view, CGRect frame) {
     if (CGRectIsEmpty(frame)) return NO;
     if (CGRectGetWidth(frame) < 180.0) return NO;
@@ -1006,34 +1092,62 @@ static CGRect LGClockPresentationFrameForView(UIView *view, UIView *container) {
     return [view convertRect:view.bounds toView:container];
 }
 
+static CGRect LGClockSourceFrameForLabel(UILabel *label, UIView *container) {
+    CGRect frame = LGClockPresentationFrameForView(label, container);
+    if (CGRectIsNull(frame) || CGRectIsEmpty(frame)) {
+        frame = [label convertRect:label.bounds toView:container];
+    }
+    return frame;
+}
+
 static CGFloat LGClockNearestNotificationTop(UIView *host, UIView *container, CGRect sourceFrame) {
     if (!host || !container) return CGFLOAT_MAX;
 
-    UIView *scanRoot = container.window ?: container;
     CGRect clockBand = CGRectInset(sourceFrame, -32.0, 0.0);
-    __block CGFloat nearestTop = CGFLOAT_MAX;
+    UIWindow *window = container.window;
+    CGFloat nearestTop = CGFLOAT_MAX;
+    CGFloat nearestLegacyRevealHintTop = CGFLOAT_MAX;
 
-    LGTraverseViews(scanRoot, ^(UIView *view) {
-        if (view == host || [view isDescendantOfView:host]) return;
-        if (!LGClockIsNotificationObstacleView(view)) return;
+    for (UIView *view in LGClockNotificationObstacleViews()) {
+        if (!view.window || (window && view.window != window)) continue;
+        if (view == host || [view isDescendantOfView:host]) continue;
+        if (!LGClockIsNotificationObstacleView(view)) continue;
 
         CGRect obstacleFrame = LGClockPresentationFrameForView(view, container);
-        if (CGRectIsEmpty(obstacleFrame)) return;
+        if (CGRectIsEmpty(obstacleFrame)) continue;
         if (!LGIsAtLeastiOS16() && !LGClockLegacyObstacleFrameLooksLikeNotificationCard(view, obstacleFrame)) {
-            return;
+            continue;
         }
         if (CGRectGetMaxX(obstacleFrame) < CGRectGetMinX(clockBand) ||
             CGRectGetMinX(obstacleFrame) > CGRectGetMaxX(clockBand)) {
-            return;
+            continue;
         }
-        if (CGRectGetMaxY(obstacleFrame) <= CGRectGetMinY(sourceFrame) + 1.0) return;
+        if (CGRectGetMaxY(obstacleFrame) <= CGRectGetMinY(sourceFrame) + 1.0) continue;
 
         CGFloat obstacleTop = CGRectGetMinY(obstacleFrame);
         if (obstacleTop < nearestTop) {
             nearestTop = obstacleTop;
         }
-    });
+    }
 
+    if (nearestTop == CGFLOAT_MAX && !LGIsAtLeastiOS16()) {
+        for (UIView *view in LGClockLegacyRevealHintViews()) {
+            if (!view.window || (window && view.window != window)) continue;
+            if (view == host || [view isDescendantOfView:host]) continue;
+            if (!LGClockIsLegacyRevealHintObstacleView(view)) continue;
+
+            CGRect hintFrame = LGClockPresentationFrameForView(view, container);
+            if (CGRectIsEmpty(hintFrame)) continue;
+            if (CGRectGetMaxX(hintFrame) < CGRectGetMinX(clockBand) ||
+                CGRectGetMinX(hintFrame) > CGRectGetMaxX(clockBand)) {
+                continue;
+            }
+            if (CGRectGetMaxY(hintFrame) <= CGRectGetMinY(sourceFrame) + 1.0) continue;
+            nearestLegacyRevealHintTop = MIN(nearestLegacyRevealHintTop, CGRectGetMinY(hintFrame));
+        }
+    }
+
+    if (nearestTop == CGFLOAT_MAX) return nearestLegacyRevealHintTop;
     return nearestTop;
 }
 
@@ -1799,7 +1913,7 @@ static UIView *LGClockOverlayContainerForHost(UIView *host) {
         host = self.superview;
         while (host && !LGIsClockHost(host)) host = host.superview;
     }
-    CGRect sourceFrame = [label convertRect:label.bounds toView:self.superview];
+    CGRect sourceFrame = LGClockSourceFrameForLabel(label, self.superview);
     CGRect desiredFrame = CGRectZero;
     UIFont *desiredFont = nil;
     id desiredCTFont = nil;
@@ -1811,7 +1925,7 @@ static UIView *LGClockOverlayContainerForHost(UIView *host) {
     CGFloat desiredDynamicHeightAxis = 0.0;
     if (LGIsLegacyClockHost(host)) {
         UIView *container = self.superview ?: LGClockOverlayContainerForHost(host);
-        sourceFrame = [label convertRect:label.bounds toView:container];
+        sourceFrame = LGClockSourceFrameForLabel(label, container);
         sourceFrame = LGClockOffsetFrame(sourceFrame);
         UIFont *sourceFont = desiredSourceFont;
         BOOL useVariableFont = LGClockLegacyUsesVariableFont();
@@ -1842,7 +1956,7 @@ static UIView *LGClockOverlayContainerForHost(UIView *host) {
                                                                                 label,
                                                                                 sourceFont,
                                                                                 nil);
-        sourceFrame = [label convertRect:label.bounds toView:container];
+        sourceFrame = LGClockSourceFrameForLabel(label, container);
         sourceFrame = LGClockOffsetFrame(sourceFrame);
         sourceFrame = LGClockSnapRect(sourceFrame, kLGClockModernGeometrySnapStep);
         desiredNearestNotificationTop = LGClockNearestNotificationTop(host, container, sourceFrame);
@@ -1956,7 +2070,7 @@ static UIView *LGClockOverlayContainerForHost(UIView *host) {
                                                                                 label,
                                                                                 sourceFont,
                                                                                 nil);
-        CGRect sourceFrame = [label convertRect:label.bounds toView:container];
+        CGRect sourceFrame = LGClockSourceFrameForLabel(label, container);
         sourceFrame = LGClockOffsetFrame(sourceFrame);
         sourceFrame = LGClockSnapRect(sourceFrame, kLGClockModernGeometrySnapStep);
         CGFloat nearestTop = LGClockNearestNotificationTop(self.clockHost, container, sourceFrame);
@@ -2026,7 +2140,7 @@ static UIView *LGClockOverlayContainerForHost(UIView *host) {
     BOOL fontChanged = ![self lg_fontObject:self.displaySourceFont equivalentTo:currentSourceFont];
     BOOL alignmentChanged = self.displayAlignment != label.textAlignment;
     BOOL topInsetChanged = fabs(self.displayTopInset - MAX(0.0, CGRectGetMinY(label.bounds))) > 0.01;
-    CGRect sourceFrame = [label convertRect:label.bounds toView:self.superview];
+    CGRect sourceFrame = LGClockSourceFrameForLabel(label, self.superview);
     if (textChanged || attributedChanged || fontChanged || alignmentChanged || topInsetChanged ||
         [self lg_rect:self.cachedSourceFrameInContainer differsFromRect:sourceFrame]) {
         [self syncFromSourceLabel:label];
@@ -2238,6 +2352,7 @@ static void LGApplyClockReplacement(UIView *host) {
 static void LGRefreshClockHosts(void) {
     UIApplication *app = UIApplication.sharedApplication;
     void (^refreshWindow)(UIWindow *) = ^(UIWindow *window) {
+        LGClockSeedObstacleRegistriesFromWindow(window);
         LGTraverseViews(window, ^(UIView *view) {
             if (LGIsClockHost(view)) LGApplyClockReplacement(view);
         });
@@ -2282,6 +2397,9 @@ static void LGClockCleanupRegisteredHosts(void) {
 
 void LGRefreshAllClockHosts(void) {
     LGAssertMainThread();
+    for (UIWindow *window in UIApplication.sharedApplication.windows) {
+        LGApplyAbbreviatedDateTextInView(window);
+    }
     LGRefreshClockHosts();
     LGRefreshRegisteredClockHosts();
 }
@@ -2385,6 +2503,62 @@ void LGRefreshAllClockHosts(void) {
 - (void)layoutSubviews {
     %orig;
     LGRelayoutLegacyNotificationListView((UIView *)self);
+}
+
+%end
+
+%hook PLPlatterView
+
+- (void)didMoveToWindow {
+    %orig;
+    LGClockRegisterNotificationObstacleView((UIView *)self);
+}
+
+- (void)layoutSubviews {
+    %orig;
+    LGClockRegisterNotificationObstacleView((UIView *)self);
+}
+
+%end
+
+%hook NCNotificationShortLookView
+
+- (void)didMoveToWindow {
+    %orig;
+    LGClockRegisterNotificationObstacleView((UIView *)self);
+}
+
+- (void)layoutSubviews {
+    %orig;
+    LGClockRegisterNotificationObstacleView((UIView *)self);
+}
+
+%end
+
+%hook NCNotificationLongLookView
+
+- (void)didMoveToWindow {
+    %orig;
+    LGClockRegisterNotificationObstacleView((UIView *)self);
+}
+
+- (void)layoutSubviews {
+    %orig;
+    LGClockRegisterNotificationObstacleView((UIView *)self);
+}
+
+%end
+
+%hook NCNotificationListSectionRevealHintView
+
+- (void)didMoveToWindow {
+    %orig;
+    LGScheduleClockRefreshForLegacyRevealHint((UIView *)self);
+}
+
+- (void)layoutSubviews {
+    %orig;
+    LGScheduleClockRefreshForLegacyRevealHint((UIView *)self);
 }
 
 %end

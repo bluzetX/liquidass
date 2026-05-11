@@ -48,7 +48,7 @@ LG_FLOAT_PREF_FUNC(LGLockscreenBlur, "Lockscreen.Blur", 8.0)
 LG_FLOAT_PREF_FUNC(LGLockscreenWallpaperScale, "Lockscreen.WallpaperScale", 0.5)
 LG_FLOAT_PREF_FUNC(LGLockscreenLightTintAlpha, "Lockscreen.LightTintAlpha", 0.1)
 LG_FLOAT_PREF_FUNC(LGLockscreenDarkTintAlpha, "Lockscreen.DarkTintAlpha", 0.0)
-LG_FLOAT_PREF_FUNC(LGLockscreenLiveCaptureFPS, "Lockscreen.LiveCaptureFPS", 10.0)
+LG_FLOAT_PREF_FUNC(LGLockscreenLiveCaptureFPS, "Lockscreen.LiveCaptureFPS", 20.0)
 
 static NSHashTable<UIView *> *LGLockscreenHostRegistry(void) {
     if (!sLockHosts) {

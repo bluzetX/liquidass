@@ -38,6 +38,11 @@ sim:: all
 	@mkdir -p /opt/simject/PreferenceBundles
 	@rm -rf /opt/simject/PreferenceBundles/LiquidAssPrefs.bundle
 	@cp -vR .theos/obj/iphone_simulator/debug/LiquidAssPrefs.bundle /opt/simject/PreferenceBundles/
+	@mkdir -p /opt/simject/PreferenceBundles/LiquidAssPrefs.bundle/changelogs
+	@cp -v $(PWD)/changelogs/*.md /opt/simject/PreferenceBundles/LiquidAssPrefs.bundle/changelogs/
+	@PKG_VERSION=$$(sed -n 's/^Version: //p' $(PWD)/control | head -n 1); \
+	/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $$PKG_VERSION" /opt/simject/PreferenceBundles/LiquidAssPrefs.bundle/Info.plist; \
+	/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $$PKG_VERSION" /opt/simject/PreferenceBundles/LiquidAssPrefs.bundle/Info.plist
 	@APP_NAME=$$(sed -n 's/^"prefs.app_name" = "\(.*\)";/\1/p' $(PWD)/LiquidAssPrefs/Resources/Localizable.strings | head -n 1); \
 	cp -v $(PWD)/LiquidAssPrefs/Resources/entry.plist /opt/simject/PreferenceLoader/Preferences/LiquidAssPrefs.plist; \
 	/usr/libexec/PlistBuddy -c "Set :entry:label $$APP_NAME" /opt/simject/PreferenceLoader/Preferences/LiquidAssPrefs.plist; \

@@ -44,6 +44,7 @@ NSDictionary *LGSwitchSetting(NSString *key, NSString *title, NSString *subtitle
 NSDictionary *LGSectionSetting(NSString *title, NSString *subtitle);
 NSDictionary *LGNavSetting(NSString *title, NSString *subtitle, NSString *action);
 NSDictionary *LGMenuSetting(NSString *key, NSString *title, NSString *subtitle, NSString *fallback, NSArray<NSDictionary *> *choices);
+NSDictionary *LGStringSetting(NSString *key, NSString *title, NSString *subtitle, NSString *fallback, NSString *placeholder);
 NSDictionary *LGSliderSetting(NSString *key, NSString *title, NSString *subtitle,
                               CGFloat fallback, CGFloat min, CGFloat max, NSInteger decimals);
 NSDictionary *LGGlassEnabledSetting(NSString *key, BOOL fallback);
@@ -74,6 +75,8 @@ NSArray<NSDictionary *> *LGHomescreenItems(void);
 NSArray<NSDictionary *> *LGAllSurfaceItems(void);
 NSArray<NSDictionary *> *LGExperimentalItems(void);
 NSArray<NSDictionary *> *LGLiveCaptureItems(void);
+NSArray<NSDictionary *> *LGPrefsSettingsItems(void);
+NSArray<NSDictionary *> *LGPrefsControlsItems(void);
 NSArray<NSDictionary *> *LGMoreOptionsItems(void);
 
 NSString *LGExportPreferencesJSONString(void);

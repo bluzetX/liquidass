@@ -5,12 +5,6 @@
 #import <QuartzCore/QuartzCore.h>
 
 static void *kLockOriginalTextColorKey = &kLockOriginalTextColorKey;
-#ifndef LG_DEBUG_VERBOSE
-#define LG_DEBUG_VERBOSE 0
-#endif
-#if LG_DEBUG_VERBOSE
-static void *kLockPlatterDebugLoggedKey = &kLockPlatterDebugLoggedKey;
-#endif
 static void *kBannerBackdropViewKey = &kBannerBackdropViewKey;
 static void *kBannerAttachedKey = &kBannerAttachedKey;
 static void *kBannerLastLiveCaptureTimeKey = &kBannerLastLiveCaptureTimeKey;
@@ -26,7 +20,7 @@ static BOOL LGBannerEnabled(void) {
 }
 
 static CGFloat LGBannerLiveCaptureFPS(void) {
-    return LG_prefFloat(@"Banner.LiveCaptureFPS", 15.0);
+    return LG_prefFloat(@"Banner.LiveCaptureFPS", 25.0);
 }
 
 static BOOL LGNotificationGlassEnabled(void) {
@@ -166,61 +160,6 @@ static BOOL LGViewLooksLikeBannerContext(UIView *view) {
     return LGHasBannerPresentationContext(view);
 }
 
-#if LG_DEBUG_VERBOSE
-static NSString *LGViewAncestorClassChain(UIView *view, NSUInteger maxDepth) {
-    if (!view) return @"(null)";
-    NSMutableArray<NSString *> *parts = [NSMutableArray array];
-    UIView *current = view;
-    NSUInteger depth = 0;
-    while (current && depth < maxDepth) {
-        [parts addObject:NSStringFromClass(current.class)];
-        current = current.superview;
-        depth++;
-    }
-    if (current) [parts addObject:@"..."];
-    return [parts componentsJoinedByString:@" > "];
-}
-
-static NSString *LGResponderClassChain(UIResponder *responder, NSUInteger maxDepth) {
-    if (!responder) return @"(null)";
-    NSMutableArray<NSString *> *parts = [NSMutableArray array];
-    UIResponder *current = responder;
-    NSUInteger depth = 0;
-    while (current && depth < maxDepth) {
-        [parts addObject:NSStringFromClass(current.class)];
-        current = current.nextResponder;
-        depth++;
-    }
-    if (current) [parts addObject:@"..."];
-    return [parts componentsJoinedByString:@" > "];
-}
-#endif
-
-#if LG_DEBUG_VERBOSE
-static BOOL LGPlatterHostLooksLikeLockscreenContext(UIView *view) {
-    if (!view) return NO;
-    if (LGHasAncestorClassNamed(view, @"CSCombinedListView")) return YES;
-    if (LGHasAncestorClassNamed(view, @"NCNotificationListView")) return YES;
-    if (LGHasAncestorClassNamed(view, @"NCNotificationCombinedListView")) return YES;
-    if (LGResponderChainContainsClassNamed(view, @"SBCoverSheetViewController")) return YES;
-    if (LGResponderChainContainsClassNamed(view, @"SBDashBoardViewController")) return YES;
-    if (LGResponderChainContainsClassNamed(view, @"CSCombinedListViewController")) return YES;
-    if (view.window && [NSStringFromClass(view.window.class) containsString:@"CoverSheet"]) return YES;
-    return NO;
-}
-
-static BOOL LGPlatterHostLooksLikeBannerContext(UIView *view) {
-    if (!view) return NO;
-    if (LGHasBannerPresentationContext(view)) return YES;
-    if (LGHasAncestorClassNamed(view, @"NCNotificationShortLookView")) return YES;
-    if (LGHasAncestorClassNamed(view, @"NCNotificationLongLookView")) return YES;
-    if (LGResponderChainContainsClassNamed(view, @"NCNotificationShortLookViewController")) return YES;
-    if (LGResponderChainContainsClassNamed(view, @"NCNotificationLongLookViewController")) return YES;
-    if (view.window && [NSStringFromClass(view.window.class) containsString:@"Banner"]) return YES;
-    return NO;
-}
-#endif
-
 static void LGInjectBannerPlatterGlass(UIView *host) {
     CFTimeInterval profileStart = LGProfileBegin();
     LGAssertMainThread();
@@ -314,58 +253,6 @@ void LGRefreshBannerPlatterHosts(void) {
         LGInjectBannerPlatterGlass(view);
     }
 }
-
-#if LG_DEBUG_VERBOSE
-static void LGLogPrimaryPlatterHostContext(UIView *view, NSString *phase) {
-    if (!view || !isPrimaryPlatterMaterialHost(view) || !view.window) return;
-    if ([objc_getAssociatedObject(view, kLockPlatterDebugLoggedKey) boolValue]) return;
-    objc_setAssociatedObject(view, kLockPlatterDebugLoggedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-
-    UIWindow *window = view.window;
-    NSString *sceneState = @"(none)";
-    if (@available(iOS 13.0, *)) {
-        if (window.windowScene) {
-            switch (window.windowScene.activationState) {
-                case UISceneActivationStateForegroundActive: sceneState = @"foregroundActive"; break;
-                case UISceneActivationStateForegroundInactive: sceneState = @"foregroundInactive"; break;
-                case UISceneActivationStateBackground: sceneState = @"background"; break;
-                case UISceneActivationStateUnattached: sceneState = @"unattached"; break;
-            }
-        }
-    }
-
-    BOOL hasPlatterAncestor = LGHasAncestorClassNamed(view, @"PLPlatterView");
-    BOOL hasShortLookAncestor = LGHasAncestorClassNamed(view, @"NCNotificationShortLookView");
-    BOOL hasLongLookAncestor = LGHasAncestorClassNamed(view, @"NCNotificationLongLookView");
-    BOOL hasCombinedListAncestor = LGHasAncestorClassNamed(view, @"CSCombinedListView");
-    BOOL hasListResponder = LGResponderChainContainsClassNamed(view, @"CSCombinedListViewController");
-    BOOL hasCoverResponder = LGResponderChainContainsClassNamed(view, @"SBCoverSheetViewController");
-    BOOL hasDashResponder = LGResponderChainContainsClassNamed(view, @"SBDashBoardViewController");
-    BOOL hasShortResponder = LGResponderChainContainsClassNamed(view, @"NCNotificationShortLookViewController");
-    BOOL hasLongResponder = LGResponderChainContainsClassNamed(view, @"NCNotificationLongLookViewController");
-
-    LGLog(@"platter host phase=%@ host=%@ frame=%@ window=%@ level=%.1f scene=%@ lockCtx=%d bannerCtx=%d platter=%d shortLook=%d/%d longLook=%d/%d combined=%d/%d cover=%d dash=%d",
-          phase ?: @"(unknown)",
-          NSStringFromClass(view.class),
-          NSStringFromCGRect(view.frame),
-          NSStringFromClass(window.class),
-          (double)window.windowLevel,
-          sceneState,
-          LGPlatterHostLooksLikeLockscreenContext(view),
-          LGPlatterHostLooksLikeBannerContext(view),
-          hasPlatterAncestor,
-          hasShortLookAncestor,
-          hasShortResponder,
-          hasLongLookAncestor,
-          hasLongResponder,
-          hasCombinedListAncestor,
-          hasListResponder,
-          hasCoverResponder,
-          hasDashResponder);
-    LGLog(@"platter host ancestors=%@", LGViewAncestorClassChain(view, 14));
-    LGLog(@"platter host responders=%@", LGResponderClassChain(view, 14));
-}
-#endif
 
 static BOOL isInsideActionButton(UIView *view) {
     static Class cls;
@@ -551,9 +438,6 @@ void LGLockscreenRefreshAttachedHosts(void) {
     CFTimeInterval profileStart = LGProfileBegin();
 
     if (!self_.window) {
-#if LG_DEBUG_VERBOSE
-        objc_setAssociatedObject(self_, kLockPlatterDebugLoggedKey, nil, OBJC_ASSOCIATION_ASSIGN);
-#endif
         LGDetachBannerHostIfNeeded(self_);
         LGDetachLockHostIfNeeded(self_);
         LGProfileEnd(@"platter.inject", profileStart);
@@ -561,9 +445,6 @@ void LGLockscreenRefreshAttachedHosts(void) {
     }
 
     if (isPrimaryPlatterMaterialHost(self_)) {
-#if LG_DEBUG_VERBOSE
-        LGLogPrimaryPlatterHostContext(self_, @"didMove");
-#endif
         if (isBannerPlatterHost(self_)) {
             LGInjectBannerPlatterGlass(self_);
             if (LGBannerEnabled()) LGAttachBannerHostIfNeeded(self_);
@@ -600,9 +481,6 @@ void LGLockscreenRefreshAttachedHosts(void) {
     }
 
     if (isPrimaryPlatterMaterialHost(self_)) {
-#if LG_DEBUG_VERBOSE
-        LGLogPrimaryPlatterHostContext(self_, @"layout");
-#endif
         if (isBannerPlatterHost(self_)) {
             LGInjectBannerPlatterGlass(self_);
             if (LGBannerEnabled()) LGAttachBannerHostIfNeeded(self_);

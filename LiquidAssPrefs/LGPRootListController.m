@@ -2,14 +2,16 @@
 #import "LGPSurfaceController.h"
 #import "LGPrefsDataSupport.h"
 #import "LGPrefsUIHelpers.h"
+#import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
 
-@interface LGPRootListController ()
+@interface LGPRootListController () <UIScrollViewDelegate>
 @property (nonatomic, strong) UIScrollView *lg_scrollView;
 @property (nonatomic, strong) UIStackView *lg_stackView;
 @property (nonatomic, strong) NSArray<UIButton *> *lg_menuButtons;
 @property (nonatomic, strong) UIView *lg_respringBar;
 @property (nonatomic, strong) UISwitch *lg_globalToggle;
+@property (nonatomic, assign) CFTimeInterval lg_lastFloatingGlassScrollRefreshTime;
 @end
 
 static NSString * const kLGRuntimeCacheUsageBytesKey = @"__runtime_cache_usage_bytes";
@@ -35,18 +37,19 @@ static NSString *LGFormatRuntimeCacheUsage(unsigned long long bytes) {
     [self.lg_stackView addArrangedSubview:[self heroCard]];
     [self.lg_stackView addArrangedSubview:LGMakeSectionDivider()];
     UIView *mainSection = [self rootSectionViewWithTitle:LGLocalized(@"prefs.section.main.title")
-                                                subtitle:LGLocalized(@"prefs.section.main.subtitle")];
+                                                subtitle:nil];
     UIButton *homescreenButton = (UIButton *)[self navCardWithTitle:LGLocalized(@"prefs.surface.homescreen.title") subtitle:LGLocalized(@"prefs.surface.homescreen.subtitle") color:[UIColor systemBlueColor] symbolName:@"apps.iphone" action:@selector(openHomescreen)];
     UIButton *lockscreenButton = (UIButton *)[self navCardWithTitle:LGLocalized(@"prefs.surface.lockscreen.title") subtitle:LGLocalized(@"prefs.surface.lockscreen.subtitle") color:[UIColor systemRedColor] symbolName:@"lg.lockscreen.stacked" action:@selector(openLockscreen)];
     UIButton *appLibraryButton = (UIButton *)[self navCardWithTitle:LGLocalized(@"prefs.surface.app_library.title") subtitle:LGLocalized(@"prefs.surface.app_library.subtitle") color:[UIColor systemGreenColor] symbolName:@"square.grid.2x2.fill" action:@selector(openAppLibrary)];
+    UIButton *moreOptionsButton = (UIButton *)[self navCardWithTitle:LGLocalized(@"prefs.misc.about.title") subtitle:LGLocalized(@"prefs.misc.about.subtitle") color:[UIColor systemIndigoColor] symbolName:@"ellipsis.circle.fill" action:@selector(handleAboutPressed)];
     UIView *miscSection = [self rootSectionViewWithTitle:LGLocalized(@"prefs.section.misc.title")
-                                                subtitle:LGLocalized(@"prefs.section.misc.subtitle")];
+                                                subtitle:nil];
     UIButton *respringButton = (UIButton *)[self navCardWithTitle:LGLocalized(@"prefs.misc.respring.title") subtitle:LGLocalized(@"prefs.misc.respring.subtitle") color:[UIColor systemOrangeColor] symbolName:@"arrow.counterclockwise.circle.fill" action:@selector(handleRespringPressed)];
-    UIButton *aboutButton = (UIButton *)[self navCardWithTitle:LGLocalized(@"prefs.misc.about.title") subtitle:LGLocalized(@"prefs.misc.about.subtitle") color:[UIColor systemGrayColor] symbolName:@"info.circle.fill" action:@selector(handleAboutPressed)];
-    self.lg_menuButtons = @[homescreenButton, lockscreenButton, appLibraryButton];
+    UIButton *aboutButton = (UIButton *)[self navCardWithTitle:LGLocalized(@"prefs.misc.prefs_settings.title") subtitle:LGLocalized(@"prefs.misc.prefs_settings.subtitle") color:[UIColor systemGrayColor] symbolName:@"info.circle.fill" action:@selector(openPrefsSettings)];
+    self.lg_menuButtons = @[homescreenButton, lockscreenButton, appLibraryButton, moreOptionsButton];
     [self.lg_stackView addArrangedSubview:mainSection];
     [self.lg_stackView addArrangedSubview:[self globalToggleCard]];
-    [self.lg_stackView addArrangedSubview:[self groupedRootNavPanelForButtons:self.lg_menuButtons]];
+    [self.lg_stackView addArrangedSubview:[self groupedRootNavPanelForButtons:@[homescreenButton, lockscreenButton, appLibraryButton, moreOptionsButton]]];
     [self.lg_stackView addArrangedSubview:miscSection];
     [self.lg_stackView addArrangedSubview:[self groupedRootNavPanelForButtons:@[respringButton, aboutButton]]];
     [self.lg_stackView addArrangedSubview:[self runtimeCacheFooterView]];
@@ -62,9 +65,12 @@ static NSString *LGFormatRuntimeCacheUsage(unsigned long long bytes) {
     self.title = LGPrefsAppName();
     self.view.backgroundColor = [UIColor systemGroupedBackgroundColor];
     if ([self respondsToSelector:@selector(table)] && self.table) self.table.hidden = YES;
-    self.navigationItem.rightBarButtonItem = LGMakeTextBarButtonItem(LGLocalized(@"prefs.button.reset_all"), self, @selector(handleResetPressed));
+    self.navigationItem.rightBarButtonItem = LGMakeCircularResetItem(self, @selector(handleResetPressed));
+    self.navigationItem.rightBarButtonItem.customView.accessibilityLabel = LGLocalized(@"prefs.button.reset_all");
+    LGRefreshCircularBackItem(self.navigationItem.rightBarButtonItem);
     [self applyNavigationBarStyle];
     LGInstallScrollableStack(self, 32.0, 14.0, &_lg_scrollView, &_lg_stackView);
+    self.lg_scrollView.delegate = self;
     LGInstallBottomRespringBar(self, &_lg_respringBar);
     [self reloadRootLocalizedContent];
     LGObservePrefsNotifications(self);
@@ -85,6 +91,8 @@ static NSString *LGFormatRuntimeCacheUsage(unsigned long long bytes) {
     [self.lg_globalToggle setOn:[self isGlobalEnabled] animated:NO];
     [self updateMenuAvailability];
     [self updateRespringBarAnimated:NO];
+    LGRefreshCircularBackItem(self.navigationItem.rightBarButtonItem);
+    LGScheduleRespringBarGlassRefresh(self.lg_respringBar);
     NSString *surface = LGLastSurfaceIdentifier();
     if (self.navigationController.topViewController != self) return;
     if (!surface.length) return;
@@ -95,6 +103,7 @@ static NSString *LGFormatRuntimeCacheUsage(unsigned long long bytes) {
         else if ([surface isEqualToString:@"Lockscreen"]) [self openLockscreen];
         else if ([surface isEqualToString:@"AppLibrary"]) [self openAppLibrary];
         else if ([surface isEqualToString:@"MoreOptions"]) [self openMoreOptions];
+        else if ([surface isEqualToString:@"PrefsSettings"]) [self openPrefsSettings];
         else if ([surface isEqualToString:@"Experimental"]) [self openMoreOptions];
     });
 }
@@ -171,18 +180,29 @@ static NSString *LGFormatRuntimeCacheUsage(unsigned long long bytes) {
 - (void)updateRespringBarAnimated:(BOOL)animated {
     BOOL shouldShow = LGNeedsRespring() && !LGRespringBarDismissed();
     if (!self.lg_respringBar) return;
-    if (shouldShow == !self.lg_respringBar.hidden) return;
+    LGRefreshRespringBarGlass(self.lg_respringBar);
+    if (shouldShow == !self.lg_respringBar.hidden) {
+        if (shouldShow) {
+            LGScheduleRespringBarGlassRefresh(self.lg_respringBar);
+        }
+        return;
+    }
     if (shouldShow) {
         self.lg_respringBar.hidden = NO;
+        LGRefreshRespringBarGlass(self.lg_respringBar);
         if (animated) {
             [UIView animateWithDuration:0.22 animations:^{
                 self.lg_respringBar.alpha = 1.0;
                 self.lg_respringBar.transform = CGAffineTransformIdentity;
+            } completion:^(__unused BOOL finished) {
+                LGRefreshRespringBarGlass(self.lg_respringBar);
             }];
         } else {
             self.lg_respringBar.alpha = 1.0;
             self.lg_respringBar.transform = CGAffineTransformIdentity;
+            LGRefreshRespringBarGlass(self.lg_respringBar);
         }
+        LGScheduleRespringBarGlassRefresh(self.lg_respringBar);
     } else {
         void (^hideBlock)(void) = ^{
             self.lg_respringBar.alpha = 0.0;
@@ -198,6 +218,29 @@ static NSString *LGFormatRuntimeCacheUsage(unsigned long long bytes) {
             hideBlock();
             completion(YES);
         }
+    }
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+    if (scrollView != self.lg_scrollView) return;
+    CFTimeInterval now = CACurrentMediaTime();
+    if (now - self.lg_lastFloatingGlassScrollRefreshTime < (1.0 / 30.0)) return;
+    self.lg_lastFloatingGlassScrollRefreshTime = now;
+    LGRefreshCircularBackItem(self.navigationItem.rightBarButtonItem);
+    LGRefreshRespringBarGlass(self.lg_respringBar);
+}
+
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
+    if (scrollView == self.lg_scrollView && !decelerate) {
+        LGRefreshCircularBackItem(self.navigationItem.rightBarButtonItem);
+        LGRefreshRespringBarGlass(self.lg_respringBar);
+    }
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
+    if (scrollView == self.lg_scrollView) {
+        LGRefreshCircularBackItem(self.navigationItem.rightBarButtonItem);
+        LGRefreshRespringBarGlass(self.lg_respringBar);
     }
 }
 
@@ -345,14 +388,15 @@ static NSString *LGFormatRuntimeCacheUsage(unsigned long long bytes) {
     titleLabel.text = title;
     titleLabel.font = [UIFont systemFontOfSize:22.0 weight:UIFontWeightBold];
 
-    UILabel *subtitleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-    subtitleLabel.text = subtitle;
-    subtitleLabel.numberOfLines = 0;
-    subtitleLabel.textColor = [UIColor secondaryLabelColor];
-    subtitleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium];
-
     [sectionStack addArrangedSubview:titleLabel];
-    [sectionStack addArrangedSubview:subtitleLabel];
+    if (subtitle.length) {
+        UILabel *subtitleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        subtitleLabel.text = subtitle;
+        subtitleLabel.numberOfLines = 0;
+        subtitleLabel.textColor = [UIColor secondaryLabelColor];
+        subtitleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium];
+        [sectionStack addArrangedSubview:subtitleLabel];
+    }
     [sectionView addSubview:sectionStack];
     [NSLayoutConstraint activateConstraints:@[
         [sectionStack.topAnchor constraintEqualToAnchor:sectionView.topAnchor constant:4.0],
@@ -483,10 +527,17 @@ static NSString *LGFormatRuntimeCacheUsage(unsigned long long bytes) {
 - (void)openHomescreen { [self pushSurfaceTitle:LGLocalized(@"prefs.surface.homescreen.title") subtitle:LGLocalized(@"prefs.surface.homescreen.subtitle") color:[UIColor systemBlueColor] identifier:@"Homescreen" items:LGHomescreenItems()]; }
 - (void)openLockscreen { [self pushSurfaceTitle:LGLocalized(@"prefs.surface.lockscreen.title") subtitle:LGLocalized(@"prefs.surface.lockscreen.subtitle") color:[UIColor systemRedColor] identifier:@"Lockscreen" items:LGLockscreenItems()]; }
 - (void)openAppLibrary { [self pushSurfaceTitle:LGLocalized(@"prefs.surface.app_library.title") subtitle:LGLocalized(@"prefs.surface.app_library.subtitle") color:[UIColor systemGreenColor] identifier:@"AppLibrary" items:LGAppLibraryItems()]; }
+- (void)openPrefsSettings {
+    [self pushSurfaceTitle:LGLocalized(@"prefs.misc.prefs_settings.title")
+                  subtitle:LGLocalized(@"prefs.misc.prefs_settings.subtitle")
+                     color:[UIColor systemGrayColor]
+                identifier:@"PrefsSettings"
+                     items:LGPrefsSettingsItems()];
+}
 - (void)openMoreOptions {
     [self pushSurfaceTitle:LGLocalized(@"prefs.misc.about.title")
                   subtitle:LGLocalized(@"prefs.misc.about.subtitle")
-                     color:[UIColor systemGrayColor]
+                     color:[UIColor systemIndigoColor]
                 identifier:@"MoreOptions"
                      items:LGMoreOptionsItems()];
 }

@@ -142,7 +142,7 @@ static void LGApplyPasscodeBackdropSuppressionState(void) {
 static void LGUpdatePasscodeVisible(BOOL visible) {
     if (sLGPasscodeVisible == visible) return;
     sLGPasscodeVisible = visible;
-    LGLog(@"passcode visible state=%d", visible);
+    LGDebugLog(@"passcode visible state=%d", visible);
     dispatch_async(dispatch_get_main_queue(), ^{
         LGApplyPasscodeBackdropSuppressionState();
     });

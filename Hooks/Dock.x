@@ -31,7 +31,7 @@ LG_FLOAT_PREF_FUNC(LGDockBlur, "Dock.Blur", 10.0)
 LG_FLOAT_PREF_FUNC(LGDockWallpaperScale, "Dock.WallpaperScale", 0.25)
 LG_FLOAT_PREF_FUNC(LGDockLightTintAlpha, "Dock.LightTintAlpha", 0.1)
 LG_FLOAT_PREF_FUNC(LGDockDarkTintAlpha, "Dock.DarkTintAlpha", 0.0)
-LG_FLOAT_PREF_FUNC(LGDockLiveCaptureFPS, "Dock.LiveCaptureFPS", 12.0)
+LG_FLOAT_PREF_FUNC(LGDockLiveCaptureFPS, "Dock.LiveCaptureFPS", 22.0)
 
 static NSHashTable<UIView *> *LGDockHostRegistry(void) {
     if (!sDockHosts) {
@@ -301,9 +301,11 @@ static void injectIntoDock(UIView *self_) {
             initWithFrame:glassFrame wallpaper:wallpaper wallpaperOrigin:wallpaperOrigin];
         glass.autoresizingMask = UIViewAutoresizingFlexibleWidth |
                                  UIViewAutoresizingFlexibleHeight;
+        glass.userInteractionEnabled = NO;
         [self_ addSubview:glass];
         objc_setAssociatedObject(self_, kDockGlassKey, glass, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     } else {
+        glass.userInteractionEnabled = NO;
         if (!LG_prefersLiveCapture(@"Dock.RenderingMode")) {
             glass.wallpaperImage = wallpaper;
         }

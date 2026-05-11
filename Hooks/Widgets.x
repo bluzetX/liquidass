@@ -10,6 +10,7 @@ static void LGWidgetsRefreshAllHosts(void);
 static void LGWidgetsRefreshAttachedHosts(void);
 static BOOL LGIsWidgetGlassHostView(UIView *view);
 static void LGRestoreWidgetOriginalState(UIView *view);
+static void LGWidgetSyncDisplayLinkActivity(void);
 static void *kWidgetAttachedKey = &kWidgetAttachedKey;
 static void *kWidgetGlassKey = &kWidgetGlassKey;
 static void *kWidgetTintKey = &kWidgetTintKey;
@@ -38,7 +39,7 @@ LG_FLOAT_PREF_FUNC(LGWidgetBlur, "Widgets.Blur", 8.0)
 LG_FLOAT_PREF_FUNC(LGWidgetWallpaperScale, "Widgets.WallpaperScale", 0.5)
 LG_FLOAT_PREF_FUNC(LGWidgetLightTintAlpha, "Widgets.LightTintAlpha", 0.1)
 LG_FLOAT_PREF_FUNC(LGWidgetDarkTintAlpha, "Widgets.DarkTintAlpha", 0.3)
-LG_FLOAT_PREF_FUNC(LGWidgetLiveCaptureFPS, "Widgets.LiveCaptureFPS", 8.0)
+LG_FLOAT_PREF_FUNC(LGWidgetLiveCaptureFPS, "Widgets.LiveCaptureFPS", 18.0)
 
 static NSHashTable<UIView *> *LGWidgetHostRegistry(void) {
     if (!sWidgetHosts) {
@@ -126,6 +127,48 @@ static void LGStartWidgetDisplayLink(void) {
 
 static void LGStopWidgetDisplayLink(void) {
     LGStopDisplayLinkState(&sWidgetDisplayLinkState);
+}
+
+static BOOL LGWidgetHostIsVisible(UIView *view) {
+    if (!view || !view.window || view.hidden || view.alpha <= 0.01f || view.layer.opacity <= 0.01f) return NO;
+    UIView *current = view.superview;
+    while (current && current != view.window) {
+        if (current.hidden || current.alpha <= 0.01f || current.layer.opacity <= 0.01f) return NO;
+        current = current.superview;
+    }
+    CALayer *layer = view.layer.presentationLayer ?: view.layer;
+    CGRect bounds = layer.bounds;
+    if (CGRectGetWidth(bounds) <= 1.0 || CGRectGetHeight(bounds) <= 1.0) return NO;
+    CGRect windowFrame = [layer convertRect:bounds toLayer:view.window.layer];
+    return CGRectIntersectsRect(CGRectInset(view.window.bounds, -8.0, -8.0), windowFrame);
+}
+
+static NSUInteger LGWidgetVisibleHostCount(void) {
+    NSUInteger count = 0;
+    for (UIView *view in LGWidgetHostRegistry().allObjects) {
+        if (!LGIsWidgetGlassHostView(view)) continue;
+        if (!LGWidgetHostIsVisible(view)) continue;
+        count++;
+    }
+    return count;
+}
+
+static void LGWidgetSyncDisplayLinkActivity(void) {
+    if (!LGWidgetEnabled()) {
+        sWidgetDisplayLinkState.activeCount = 0;
+        LGDisplayLinkStateDidChangeActivity(&sWidgetDisplayLinkState);
+        LGStopWidgetDisplayLink();
+        return;
+    }
+
+    NSUInteger visibleHostCount = LGWidgetVisibleHostCount();
+    sWidgetDisplayLinkState.activeCount = visibleHostCount;
+    LGDisplayLinkStateDidChangeActivity(&sWidgetDisplayLinkState);
+    if (visibleHostCount > 0) {
+        LGStartWidgetDisplayLink();
+    } else {
+        LGStopWidgetDisplayLink();
+    }
 }
 
 static UIColor *widgetTintColorForView(UIView *view) {
@@ -236,10 +279,8 @@ static void LGDetachWidgetGlassHostView(UIView *view) {
     LGRestoreWidgetOriginalState(view);
     if ([objc_getAssociatedObject(view, kWidgetAttachedKey) boolValue]) {
         objc_setAssociatedObject(view, kWidgetAttachedKey, nil, OBJC_ASSOCIATION_ASSIGN);
-        sWidgetDisplayLinkState.activeCount = MAX(0, sWidgetDisplayLinkState.activeCount - 1);
-        LGDisplayLinkStateDidChangeActivity(&sWidgetDisplayLinkState);
-        if (sWidgetDisplayLinkState.activeCount == 0) LGStopWidgetDisplayLink();
     }
+    LGWidgetSyncDisplayLinkActivity();
 }
 
 static void LGRememberWidgetOriginalState(UIView *view) {
@@ -456,6 +497,7 @@ static void LGInjectIntoWidgetGlassHostView(UIView *view) {
         LGMarkLiveCaptureRefreshedForHost(view, kWidgetLastLiveCaptureTimeKey);
     }
     [LGWidgetHostRegistry() addObject:view];
+    LGWidgetSyncDisplayLinkActivity();
     [view sendSubviewToBack:glass];
     ensureWidgetTintOverlay(view);
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -589,9 +631,8 @@ static void LGWidgetsPrefsChanged(CFNotificationCenterRef center,
     LGInjectIntoWidgetGlassHostView(self_);
     if (![objc_getAssociatedObject(self_, kWidgetAttachedKey) boolValue]) {
         objc_setAssociatedObject(self_, kWidgetAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        sWidgetDisplayLinkState.activeCount++;
-        LGDisplayLinkStateDidChangeActivity(&sWidgetDisplayLinkState);
-        LGStartWidgetDisplayLink();
+        [LGWidgetHostRegistry() addObject:self_];
+        LGWidgetSyncDisplayLinkActivity();
     }
 }
 
@@ -601,10 +642,10 @@ static void LGWidgetsPrefsChanged(CFNotificationCenterRef center,
     LGApplyWidgetStackMaterialVisibility(self_);
     if (!LGIsWidgetGlassHostView(self_)) return;
     if (!LGWidgetEnabled()) {
-        removeWidgetOverlays(self_);
-        LGRestoreWidgetOriginalState(self_);
+        LGDetachWidgetGlassHostView(self_);
         return;
     }
+    LGWidgetSyncDisplayLinkActivity();
     if (LG_prefersLiveCapture(@"Widgets.RenderingMode")) {
         LGInjectIntoWidgetGlassHostView(self_);
         return;
@@ -621,12 +662,14 @@ static void LGWidgetsPrefsChanged(CFNotificationCenterRef center,
 - (void)setContentOffset:(CGPoint)offset {
     %orig;
     if (!LGViewBelongsToWidgetStack((UIView *)self)) return;
+    LGWidgetSyncDisplayLinkActivity();
     if (!sWidgetDisplayLinkState.link) LG_updateRegisteredGlassViews(LGUpdateGroupWidgets);
 }
 
 - (void)setContentOffset:(CGPoint)offset animated:(BOOL)animated {
     %orig;
     if (!LGViewBelongsToWidgetStack((UIView *)self)) return;
+    LGWidgetSyncDisplayLinkActivity();
     if (!sWidgetDisplayLinkState.link) LG_updateRegisteredGlassViews(LGUpdateGroupWidgets);
 }
 
@@ -651,9 +694,8 @@ static void LGWidgetsPrefsChanged(CFNotificationCenterRef center,
     LGInjectIntoWidgetGlassHostView(host);
     if (![objc_getAssociatedObject(host, kWidgetAttachedKey) boolValue]) {
         objc_setAssociatedObject(host, kWidgetAttachedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        sWidgetDisplayLinkState.activeCount++;
-        LGDisplayLinkStateDidChangeActivity(&sWidgetDisplayLinkState);
-        LGStartWidgetDisplayLink();
+        [LGWidgetHostRegistry() addObject:host];
+        LGWidgetSyncDisplayLinkActivity();
     }
 }
 
@@ -666,6 +708,7 @@ static void LGWidgetsPrefsChanged(CFNotificationCenterRef center,
         LGDetachWidgetGlassHostView(host);
         return;
     }
+    LGWidgetSyncDisplayLinkActivity();
     LiquidGlassView *glass = objc_getAssociatedObject(host, kWidgetGlassKey);
     if (!glass) {
         LGInjectIntoWidgetGlassHostView(host);

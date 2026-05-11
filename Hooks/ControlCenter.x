@@ -33,7 +33,7 @@ LG_FLOAT_PREF_FUNC(LGControlCenterBlur, "ControlCenter.Blur", 10.0)
 LG_FLOAT_PREF_FUNC(LGControlCenterWallpaperScale, "ControlCenter.WallpaperScale", 0.25)
 LG_FLOAT_PREF_FUNC(LGControlCenterLightTintAlpha, "ControlCenter.LightTintAlpha", 0.10)
 LG_FLOAT_PREF_FUNC(LGControlCenterDarkTintAlpha, "ControlCenter.DarkTintAlpha", 0.18)
-LG_FLOAT_PREF_FUNC(LGControlCenterLiveCaptureFPS, "ControlCenter.LiveCaptureFPS", 12.0)
+LG_FLOAT_PREF_FUNC(LGControlCenterLiveCaptureFPS, "ControlCenter.LiveCaptureFPS", 22.0)
 LG_FLOAT_PREF_FUNC(LGControlCenterFullscreenBlurRadius, "ControlCenter.FullscreenBlurRadius", 12.0)
 LG_FLOAT_PREF_FUNC(LGControlCenterPasscodeBezelWidth, "Lockscreen.Passcode.BezelWidth", 30.0)
 LG_FLOAT_PREF_FUNC(LGControlCenterPasscodeGlassThickness, "Lockscreen.Passcode.GlassThickness", 80.0)
@@ -321,7 +321,7 @@ static void LGControlCenterRefreshFullscreenBlurCapMaterials(void) {
 
 static void LGControlCenterStartFullscreenBlurCapDisplayLink(void) {
     LGStartDisplayLinkStateWithPreferenceKey(&sControlCenterFullscreenBlurCapState,
-                                             LGPreferredLiveCaptureFramesPerSecond(LG_prefFloat(@"ControlCenter.FullscreenBlurCapFPS", 15.0)),
+                                             LGPreferredLiveCaptureFramesPerSecond(LG_prefFloat(@"ControlCenter.FullscreenBlurCapFPS", 25.0)),
                                              @"DisplayLink.ControlCenter.Enabled",
                                              ^{
         LGControlCenterRefreshFullscreenBlurCapMaterials();

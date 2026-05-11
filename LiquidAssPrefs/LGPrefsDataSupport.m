@@ -39,6 +39,8 @@ static NSArray<NSString *> *LGExportablePreferenceKeys(void) {
         NSArray<NSArray<NSDictionary *> *> *sources = @[
             LGAllSurfaceItems(),
             LGMoreOptionsItems(),
+            LGPrefsSettingsItems(),
+            LGPrefsControlsItems(),
             LGExperimentalItems(),
             LGLiveCaptureItems()
         ];
@@ -356,6 +358,22 @@ NSDictionary *LGSectionSetting(NSString *title, NSString *subtitle) {
     };
 }
 
+static NSDictionary *LGSpacerSetting(CGFloat height, CGFloat afterSpacing) {
+    return @{
+        @"type": @"section",
+        @"title": @"",
+        @"subtitle": @"",
+        @"height": @(height),
+        @"after_spacing": @(afterSpacing)
+    };
+}
+
+static NSDictionary *LGAboutContentSetting(void) {
+    return @{
+        @"type": @"about_content"
+    };
+}
+
 NSDictionary *LGNavSetting(NSString *title, NSString *subtitle, NSString *action) {
     return @{
         @"type": @"nav",
@@ -384,6 +402,17 @@ NSDictionary *LGMenuSetting(NSString *key, NSString *title, NSString *subtitle, 
         @"subtitle": subtitle ?: @"",
         @"default": fallback ?: @"",
         @"choices": choices ?: @[]
+    };
+}
+
+NSDictionary *LGStringSetting(NSString *key, NSString *title, NSString *subtitle, NSString *fallback, NSString *placeholder) {
+    return @{
+        @"type": @"string",
+        @"key": key ?: @"",
+        @"title": title ?: @"",
+        @"subtitle": subtitle ?: @"",
+        @"default": fallback ?: @"",
+        @"placeholder": placeholder ?: @""
     };
 }
 
@@ -864,6 +893,21 @@ NSArray<NSDictionary *> *LGLockscreenItems(void) {
                                      0.0,
                                      120.0,
                                      1)];
+    [items addObject:LGSectionSetting(LGLocalized(@"prefs.section.lockscreen_date_label.title"),
+                                      LGLocalized(@"prefs.section.lockscreen_date_label.subtitle"))];
+    NSMutableDictionary *dateFormatEnabled = [LGSwitchSetting(@"Lockscreen.Clock.DateFormat.Enabled",
+                                                             LGLocalized(@"prefs.control.date_format_enabled"),
+                                                             LGLocalized(@"prefs.subtitle.date_format_enabled"),
+                                                             YES) mutableCopy];
+    dateFormatEnabled[@"controls_following_panel"] = @YES;
+    [items addObject:[dateFormatEnabled copy]];
+    [items addObject:LGSettingControlledByKey(LGStringSetting(@"Lockscreen.Clock.DateFormat.Format",
+                                                             LGLocalized(@"prefs.control.date_format"),
+                                                             LGLocalized(@"prefs.subtitle.date_format"),
+                                                             @"EEE MMM d",
+                                                             @"EEE MMM d"),
+                                             @"Lockscreen.Clock.DateFormat.Enabled",
+                                             @YES)];
     if (LGIsAtLeastiOS16()) {
         [items addObject:LGSectionSetting(@"", @"")];
         [items addObject:LGSettingControlledByKey(LGSwitchSetting(@"Lockscreen.Clock.VariableFont.Enabled",
@@ -1123,6 +1167,10 @@ NSArray<NSDictionary *> *LGExperimentalItems(void) {
         LGGlassEnabledSetting(@"ControlCenter.Enabled", YES),
         LGSectionSetting(LGLocalized(@"prefs.section.experimental_rendering.title"),
                          LGLocalized(@"prefs.section.experimental_rendering.subtitle")),
+        LGNavSetting(LGLocalized(@"prefs.misc.live_capture.title"),
+                     LGLocalized(@"prefs.misc.live_capture.subtitle"),
+                     @"openLiveCaptureConfiguration"),
+        LGSpacerSetting(0.0, 0.0),
         LGMenuSetting(@"Dock.RenderingMode",
                       LGLocalized(@"prefs.section.dock.title"),
                       @"",
@@ -1290,28 +1338,51 @@ NSArray<NSDictionary *> *LGLiveCaptureItems(void) {
                         0),
         LGSectionSetting(LGLocalized(@"prefs.section.live_capture_fps.title"),
                          LGLocalized(@"prefs.section.live_capture_fps.subtitle")),
-        LGLiveCaptureFPSSlider(@"Dock.LiveCaptureFPS", LGLocalized(@"prefs.section.dock.title"), 12.0),
-        LGLiveCaptureFPSSlider(@"FolderOpen.LiveCaptureFPS", LGLocalized(@"prefs.section.folder_open.title"), 12.0),
-        LGLiveCaptureFPSSlider(@"ContextMenu.LiveCaptureFPS", LGLocalized(@"prefs.section.context_menu.title"), 15.0),
-        LGLiveCaptureFPSSlider(@"Banner.LiveCaptureFPS", LGLocalized(@"prefs.section.banner.title"), 15.0),
-        LGLiveCaptureFPSSlider(@"Widgets.LiveCaptureFPS", LGLocalized(@"prefs.section.widgets.title"), 8.0),
-        LGLiveCaptureFPSSlider(@"AppLibrary.LiveCaptureFPS", LGLocalized(@"prefs.surface.app_library.title"), 12.0),
-        LGLiveCaptureFPSSlider(@"Lockscreen.LiveCaptureFPS", LGLocalized(@"prefs.surface.lockscreen.title"), 10.0),
-        LGLiveCaptureFPSSlider(@"ControlCenter.LiveCaptureFPS", LGLocalized(@"prefs.section.control_center.title"), 12.0),
+        LGLiveCaptureFPSSlider(@"Dock.LiveCaptureFPS", LGLocalized(@"prefs.section.dock.title"), 22.0),
+        LGLiveCaptureFPSSlider(@"FolderOpen.LiveCaptureFPS", LGLocalized(@"prefs.section.folder_open.title"), 22.0),
+        LGLiveCaptureFPSSlider(@"ContextMenu.LiveCaptureFPS", LGLocalized(@"prefs.section.context_menu.title"), 25.0),
+        LGLiveCaptureFPSSlider(@"Banner.LiveCaptureFPS", LGLocalized(@"prefs.section.banner.title"), 25.0),
+        LGLiveCaptureFPSSlider(@"Widgets.LiveCaptureFPS", LGLocalized(@"prefs.section.widgets.title"), 18.0),
+        LGLiveCaptureFPSSlider(@"AppLibrary.LiveCaptureFPS", LGLocalized(@"prefs.surface.app_library.title"), 22.0),
+        LGLiveCaptureFPSSlider(@"Lockscreen.LiveCaptureFPS", LGLocalized(@"prefs.surface.lockscreen.title"), 20.0),
+        LGLiveCaptureFPSSlider(@"ControlCenter.LiveCaptureFPS", LGLocalized(@"prefs.section.control_center.title"), 22.0),
         LGLiveCaptureFPSSlider(@"ControlCenter.FullscreenBlurCapFPS",
                                LGLocalized(@"prefs.live_capture.control_center_blur_cap.title"),
-                               15.0),
+                               25.0),
     ];
 }
 
-NSArray<NSDictionary *> *LGMoreOptionsItems(void) {
-    NSMutableArray<NSDictionary *> *items = [NSMutableArray arrayWithArray:@[
+NSArray<NSDictionary *> *LGPrefsSettingsItems(void) {
+    return @[
         LGMenuSetting(kLGPrefsLanguageKey,
                       LGLocalized(@"prefs.misc.language.title"),
                       @"",
                       @"en",
                       LGAvailableLanguageChoices()),
-        LGSectionSetting(@"", @""),
+        LGSpacerSetting(2.0, 0.0),
+        LGAboutContentSetting(),
+    ];
+}
+
+NSArray<NSDictionary *> *LGPrefsControlsItems(void) {
+    return @[
+        LGSwitchSetting(@"Preferences.BackButton.Enabled",
+                        LGLocalized(@"prefs.misc.preferences_back_button.title"),
+                        LGLocalized(@"prefs.misc.preferences_back_button.subtitle"),
+                        NO),
+        LGSwitchSetting(@"Preferences.GoToTop.Enabled",
+                        LGLocalized(@"prefs.misc.preferences_go_to_top.title"),
+                        LGLocalized(@"prefs.misc.preferences_go_to_top.subtitle"),
+                        NO),
+        LGSwitchSetting(@"Preferences.RespringBar.Enabled",
+                        LGLocalized(@"prefs.misc.preferences_respring_bar.title"),
+                        LGLocalized(@"prefs.misc.preferences_respring_bar.subtitle"),
+                        NO),
+    ];
+}
+
+NSArray<NSDictionary *> *LGMoreOptionsItems(void) {
+    NSMutableArray<NSDictionary *> *items = [NSMutableArray arrayWithArray:@[
         LGSectionSetting(LGLocalized(@"prefs.section.surface_tint_override.title"),
                          LGLocalized(@"prefs.section.surface_tint_override.subtitle")),
         ({
@@ -1351,24 +1422,16 @@ NSArray<NSDictionary *> *LGMoreOptionsItems(void) {
                                      LGLocalized(@"prefs.misc.app_library_composite.title"),
                                      LGLocalized(@"prefs.misc.app_library_composite.subtitle"),
                                      NO)];
-    [items addObject:LGNavSetting(LGLocalized(@"prefs.misc.live_capture.title"),
-                                  LGLocalized(@"prefs.misc.live_capture.subtitle"),
-                                  @"openLiveCaptureConfiguration")];
     [items addObject:LGSettingControlledByKey(
-                         LGSwitchSetting(@"SettingsControls.Enabled",
-                                         LGLocalized(@"prefs.misc.settings_controls.title"),
-                                         LGLocalized(@"prefs.misc.settings_controls.subtitle"),
-                                         YES),
-                         @"Global.Enabled",
-                         @NO)];
-    [items addObject:LGSwitchSetting(@"DebugLogging.Enabled",
-                                     LGLocalized(@"prefs.misc.debug_logging.title"),
-                                     LGLocalized(@"prefs.misc.debug_logging.subtitle"),
-                                     NO)];
-    [items addObject:LGSwitchSetting(@"DebugProfiling.Enabled",
-                                     LGLocalized(@"prefs.misc.debug_profiling.title"),
-                                     LGLocalized(@"prefs.misc.debug_profiling.subtitle"),
-                                     NO)];
+        LGSwitchSetting(@"SettingsControls.Enabled",
+                        LGLocalized(@"prefs.misc.settings_controls.title"),
+                        LGLocalized(@"prefs.misc.settings_controls.subtitle"),
+                        YES),
+        @"Global.Enabled",
+        @NO)];
+    [items addObject:LGNavSetting(LGLocalized(@"prefs.section.preferences.title"),
+                                  LGLocalized(@"prefs.section.preferences.subtitle"),
+                                  @"openPreferencesControls")];
     [items addObject:LGKeyedNavSetting(@"RWB.ThirdPartyBundleIDs",
                                        LGLocalized(@"prefs.misc.rwb_third_party.title"),
                                        LGLocalized(@"prefs.misc.rwb_third_party.subtitle"),
@@ -1379,6 +1442,17 @@ NSArray<NSDictionary *> *LGMoreOptionsItems(void) {
     [items addObject:LGNavSetting(LGLocalized(@"prefs.misc.experimental.title"),
                                   LGLocalized(@"prefs.misc.experimental.subtitle"),
                                   @"openExperimental")];
+    [items addObject:LGSectionSetting(@"", @"")];
+    [items addObject:LGSectionSetting(LGLocalized(@"prefs.misc.debugging_section.title"),
+                                      LGLocalized(@"prefs.misc.debugging_section.subtitle"))];
+    [items addObject:LGSwitchSetting(@"DebugLogging.Enabled",
+                                     LGLocalized(@"prefs.misc.debug_logging.title"),
+                                     LGLocalized(@"prefs.misc.debug_logging.subtitle"),
+                                     NO)];
+    [items addObject:LGSwitchSetting(@"DebugProfiling.Enabled",
+                                     LGLocalized(@"prefs.misc.debug_profiling.title"),
+                                     LGLocalized(@"prefs.misc.debug_profiling.subtitle"),
+                                     NO)];
     [items addObject:LGSectionSetting(@"", @"")];
     [items addObject:LGSectionSetting(LGLocalized(@"prefs.misc.import_export_section.title"),
                                       LGLocalized(@"prefs.misc.import_export_section.subtitle"))];
