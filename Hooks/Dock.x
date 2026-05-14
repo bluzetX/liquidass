@@ -83,8 +83,17 @@ static BOOL isInsideFloatingDock(UIView *view) {
     return LGHasAncestorClass(view, cls);
 }
 
-static BOOL isReasonableDockMaterialBounds(CGRect bounds) {
-    return bounds.size.width >= 60.0 && bounds.size.height >= 40.0;
+static BOOL isReasonableDockMaterialBoundsForMode(CGRect bounds, BOOL insideFloating, BOOL insideRegular) {
+    CGFloat width = CGRectGetWidth(bounds);
+    CGFloat height = CGRectGetHeight(bounds);
+    if (width < 1.0 || height < 1.0) return NO;
+    if (insideFloating) {
+        return width >= 160.0 && height >= 40.0 && width >= height * 2.0;
+    }
+    if (insideRegular) {
+        return width >= 160.0 && height >= 40.0;
+    }
+    return NO;
 }
 
 static void *kDockRetryKey = &kDockRetryKey;
@@ -99,10 +108,10 @@ static void *kDockBackdropViewKey = &kDockBackdropViewKey;
 
 static LGDockMode LGResolveDockModeForView(UIView *view) {
     if (isInsideCategoryStackBackground(view)) return LGDockModeNone;
-    if (!isReasonableDockMaterialBounds(view.bounds)) return LGDockModeNone;
     BOOL insideFloating = isInsideFloatingDock(view);
     BOOL insideRegular = isInsideRegularDock(view);
     if (!insideFloating && !insideRegular) return LGDockModeNone;
+    if (!isReasonableDockMaterialBoundsForMode(view.bounds, insideFloating, insideRegular)) return LGDockModeNone;
     if (insideFloating && LGHasFloatingDockWindow()) return LGDockModeFloating;
     if (insideRegular) return LGDockModeRegular;
     if (insideFloating) return LGDockModeFloating;

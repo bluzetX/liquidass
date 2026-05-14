@@ -22,6 +22,7 @@ static LGDisplayLinkState sControlCenterDisplayLinkState = {0};
 static LGDisplayLinkState sControlCenterFullscreenBlurCapState = {0};
 static NSHashTable<UIView *> *sControlCenterHosts = nil;
 static NSHashTable<UIView *> *sControlCenterFullscreenMaterials = nil;
+static BOOL sControlCenterOverlayVisible = NO;
 
 LG_ENABLED_BOOL_PREF_FUNC(LGControlCenterEnabled, "ControlCenter.Enabled", YES)
 LG_FLOAT_PREF_FUNC(LGControlCenterBezelWidth, "ControlCenter.BezelWidth", 18.0)
@@ -147,6 +148,7 @@ static BOOL LGControlCenterViewHierarchyIsVisible(UIView *view) {
 }
 
 static BOOL LGControlCenterHostIsVisible(UIView *host) {
+    if (!sControlCenterOverlayVisible) return NO;
     if (!LGIsControlCenterModuleContainer(host) || !LGControlCenterViewHierarchyIsVisible(host)) return NO;
     CALayer *layer = host.layer.presentationLayer ?: host.layer;
     CGRect bounds = layer.bounds;
@@ -293,6 +295,7 @@ static void LGControlCenterApplyFullscreenMaterialBlur(UIView *view) {
 }
 
 static BOOL LGControlCenterFullscreenMaterialIsVisible(UIView *view) {
+    if (!sControlCenterOverlayVisible) return NO;
     if (!view || !view.window || view.hidden || view.alpha <= 0.01f || view.layer.opacity <= 0.01f) return NO;
     CALayer *layer = view.layer.presentationLayer ?: view.layer;
     CGRect bounds = layer.bounds;
@@ -503,6 +506,7 @@ static void LGControlCenterDetachHost(UIView *host) {
 static void LGControlCenterStartDisplayLink(void);
 static void LGControlCenterInjectHost(UIView *host);
 static void LGControlCenterSyncDisplayLinkActivity(void);
+static void LGControlCenterRefreshFullscreenBlurCapMaterials(void);
 
 static void LGControlCenterRefreshAttachedHosts(void) {
     for (UIView *host in LGControlCenterHostRegistry().allObjects) {
@@ -544,9 +548,11 @@ static void LGControlCenterAttachHostIfNeeded(UIView *host) {
 
 static void LGControlCenterSyncDisplayLinkActivity(void) {
     NSInteger visibleHostCount = 0;
-    for (UIView *host in LGControlCenterHostRegistry().allObjects) {
-        if (!LGControlCenterHostIsVisible(host)) continue;
-        visibleHostCount++;
+    if (sControlCenterOverlayVisible) {
+        for (UIView *host in LGControlCenterHostRegistry().allObjects) {
+            if (!LGControlCenterHostIsVisible(host)) continue;
+            visibleHostCount++;
+        }
     }
     sControlCenterDisplayLinkState.activeCount = visibleHostCount;
     LGDisplayLinkStateDidChangeActivity(&sControlCenterDisplayLinkState);
@@ -554,6 +560,22 @@ static void LGControlCenterSyncDisplayLinkActivity(void) {
         LGControlCenterStartDisplayLink();
     } else {
         LGStopDisplayLinkState(&sControlCenterDisplayLinkState);
+    }
+}
+
+static void LGControlCenterSetOverlayVisible(BOOL visible) {
+    if (sControlCenterOverlayVisible == visible) return;
+    sControlCenterOverlayVisible = visible;
+    if (visible) {
+        LGControlCenterRefreshAttachedHosts();
+        LGControlCenterRefreshFullscreenBlurCapMaterials();
+    } else {
+        sControlCenterDisplayLinkState.activeCount = 0;
+        LGDisplayLinkStateDidChangeActivity(&sControlCenterDisplayLinkState);
+        LGStopDisplayLinkState(&sControlCenterDisplayLinkState);
+        sControlCenterFullscreenBlurCapState.activeCount = 0;
+        LGDisplayLinkStateDidChangeActivity(&sControlCenterFullscreenBlurCapState);
+        LGStopDisplayLinkState(&sControlCenterFullscreenBlurCapState);
     }
 }
 
@@ -666,6 +688,30 @@ static void LGControlCenterPrefsChanged(CFNotificationCenterRef center,
     UIView *self_ = (UIView *)self;
     if (!self_.window) return;
     LGControlCenterInjectHost(self_);
+}
+
+%end
+
+%hook CCUIModularControlCenterOverlayViewController
+
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    LGControlCenterSetOverlayVisible(YES);
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    LGControlCenterSetOverlayVisible(YES);
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    LGControlCenterSetOverlayVisible(NO);
+    %orig;
+}
+
+- (void)viewDidDisappear:(BOOL)animated {
+    %orig;
+    LGControlCenterSetOverlayVisible(NO);
 }
 
 %end

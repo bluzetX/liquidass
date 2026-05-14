@@ -14,6 +14,8 @@ typedef struct {
     NSInteger activeCount;
     NSInteger preferredFPS;
     CFTimeInterval lastTickTimestamp;
+    NSInteger lastLoggedActiveCount;
+    BOOL lastLoggedAllowed;
     __strong NSString *enabledPreferenceKey;
     __strong CADisplayLink *link;
     __strong id driver;

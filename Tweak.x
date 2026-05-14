@@ -1659,11 +1659,38 @@ static void LG_requestRespring(void) {
     [[serviceClass sharedService] sendActions:[NSSet setWithObject:restartAction] withResult:nil];
 }
 
+static void LG_startDebugMainThreadStallProbe(void) {
+    static dispatch_once_t onceToken;
+    static dispatch_source_t timer;
+    dispatch_once(&onceToken, ^{
+        dispatch_queue_t queue = dispatch_queue_create("dylv.liquidass.mainstall", DISPATCH_QUEUE_SERIAL);
+        timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, queue);
+        dispatch_source_set_timer(timer,
+                                  dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
+                                  (uint64_t)(0.75 * NSEC_PER_SEC),
+                                  (uint64_t)(0.10 * NSEC_PER_SEC));
+        dispatch_source_set_event_handler(timer, ^{
+            if (!LG_prefBool(@"DebugLogging.Enabled", NO)) return;
+            CFTimeInterval scheduled = CACurrentMediaTime();
+            dispatch_async(dispatch_get_main_queue(), ^{
+                CFTimeInterval delay = CACurrentMediaTime() - scheduled;
+                if (delay < 0.25) return;
+                LGDebugLog(@"touchdiag main-thread-stall delay=%.3fs windows=%lu appState=%ld",
+                           delay,
+                           (unsigned long)UIApplication.sharedApplication.windows.count,
+                           (long)UIApplication.sharedApplication.applicationState);
+            });
+        });
+        dispatch_resume(timer);
+    });
+}
+
 %ctor {
     if (!LGIsSpringBoardProcess()) return;
 
     LGReloadPreferences();
     LGLog(@"loaded into %@", LGMainBundleIdentifier() ?: @"(unknown)");
+    LG_startDebugMainThreadStallProbe();
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         LGPrewarmPipelines();
     });
@@ -1993,6 +2020,95 @@ static void LGHandleWallpaperReplicaView(UIView *replicaView) {
         return;
     }
 }
+
+static BOOL LGTouchDiagClassLooksRelevant(UIView *view) {
+    if (!view) return NO;
+    NSString *className = NSStringFromClass(view.class);
+    if ([className containsString:@"Liquid"] ||
+        [className containsString:@"Glass"] ||
+        [className containsString:@"Backdrop"] ||
+        [className hasPrefix:@"LG"]) {
+        return YES;
+    }
+    static Class glassClass;
+    if (!glassClass) glassClass = [LiquidGlassView class];
+    return glassClass && [view isKindOfClass:glassClass];
+}
+
+static NSString *LGTouchDiagViewSummary(UIView *view, UIView *coordinateView) {
+    if (!view) return @"(null)";
+    CGRect frame = CGRectNull;
+    if (coordinateView && view.superview) {
+        frame = [view.superview convertRect:view.frame toView:coordinateView];
+    } else {
+        frame = view.frame;
+    }
+    return [NSString stringWithFormat:@"%p %@ frame=%@ alpha=%.2f hidden=%d ui=%d",
+            view,
+            NSStringFromClass(view.class),
+            NSStringFromCGRect(frame),
+            view.alpha,
+            view.hidden,
+            view.userInteractionEnabled];
+}
+
+static NSString *LGTouchDiagAncestorChain(UIView *view, UIView *stopView) {
+    if (!view) return @"(null)";
+    NSMutableArray<NSString *> *parts = [NSMutableArray array];
+    UIView *current = view;
+    NSUInteger depth = 0;
+    while (current && depth < 12) {
+        [parts addObject:NSStringFromClass(current.class)];
+        if (current == stopView) break;
+        current = current.superview;
+        depth++;
+    }
+    return [parts componentsJoinedByString:@" <- "];
+}
+
+static NSArray<NSString *> *LGTouchDiagRelevantViewsAtPoint(UIWindow *window, CGPoint point) {
+    if (!window) return @[];
+    NSMutableArray<NSString *> *matches = [NSMutableArray array];
+    LGTraverseViews(window, ^(UIView *view) {
+        if (matches.count >= 12) return;
+        if (view == window || view.hidden || view.alpha <= 0.01 || view.layer.opacity <= 0.01) return;
+        if (!LGTouchDiagClassLooksRelevant(view)) return;
+        CGPoint localPoint = [view convertPoint:point fromView:window];
+        if (![view pointInside:localPoint withEvent:nil]) return;
+        [matches addObject:LGTouchDiagViewSummary(view, window)];
+    });
+    return matches;
+}
+
+static void LGTouchDiagLogTouchBegan(UIWindow *window, UITouch *touch, UIEvent *event) {
+    if (!window || !touch) return;
+    CGPoint point = [touch locationInView:window];
+    UIView *hitView = [window hitTest:point withEvent:event];
+    NSArray<NSString *> *relevantViews = LGTouchDiagRelevantViewsAtPoint(window, point);
+    LGDebugLog(@"touchdiag began window=%@ point=%@ touchView=%@ hit=%@ chain=%@ relevant=%@",
+               NSStringFromClass(window.class),
+               NSStringFromCGPoint(point),
+               LGTouchDiagViewSummary(touch.view, window),
+               LGTouchDiagViewSummary(hitView, window),
+               LGTouchDiagAncestorChain(hitView, window),
+               relevantViews);
+}
+
+%hook UIWindow
+
+- (void)sendEvent:(UIEvent *)event {
+    if (LG_prefBool(@"DebugLogging.Enabled", NO)) {
+        for (UITouch *touch in event.allTouches) {
+            if (touch.phase != UITouchPhaseBegan) continue;
+            UIWindow *touchWindow = touch.window ?: (UIWindow *)self;
+            if (touchWindow != (UIWindow *)self) continue;
+            LGTouchDiagLogTouchBegan((UIWindow *)self, touch, event);
+        }
+    }
+    %orig;
+}
+
+%end
 
 %hook PBUISnapshotReplicaView
 

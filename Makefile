@@ -1,10 +1,8 @@
-# build for a real device then: make package ARCHS="arm64 arm64e" TARGET="iphone:clang:latest:14.0" FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless/roothide
-
 ifeq ($(filter sim,$(MAKECMDGOALS)),sim)
 export TARGET ?= simulator:clang:latest:14.0
 export ARCHS ?= x86_64
 else
-export TARGET ?= iphone:clang:latest:14.0
+export TARGET ?= iphone:clang:16.5:14.0
 export ARCHS ?= arm64 arm64e
 endif
 
