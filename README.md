@@ -39,7 +39,7 @@ This tweak is incomplete, issues WILL happen.
 - the blur is separable and baked in two compute passes, then reused until settings or source content actually require a rebake
 
 ## donation
-i only accept crpyto for now, wallet addreses:
+i only accept crypto for now, wallet addreses:
 ```
 BTC: bc1qlv830emqsffqslns2e3kglkgcdnlag0nfnyj4k
 ETH: 0x6245EF47c749D1b5c2830b145cB943a8aD826bea 
