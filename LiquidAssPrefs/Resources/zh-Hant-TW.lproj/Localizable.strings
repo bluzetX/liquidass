@@ -36,10 +36,9 @@
 "prefs.control.background_dark_tint_alpha" = "背景深色色調透明度";
 "prefs.control.active_scale" = "按下時縮放";
 "prefs.control.active_light_tint_alpha" = "按下時淺色色調透明度";
-"prefs.control.active_specular" = "按下時高光";
-"prefs.control.active_bezel_width" = "按下時邊框寬度";
-"prefs.control.active_refraction" = "按下時折射";
-"prefs.control.active_blur" = "按下時模糊";
+"prefs.control.motion_highlights" = "Motion Highlights";
+"prefs.control.motion_highlights_fps" = "Motion FPS";
+"prefs.control.motion_highlights_sensitivity" = "Motion Sensitivity";
 "prefs.control.press_in_damping" = "按下時阻尼";
 "prefs.control.press_in_duration" = "按下時長";
 "prefs.control.press_in_mass" = "按下時質量";
@@ -73,10 +72,9 @@
 "prefs.subtitle.background_dark_tint_alpha" = "密碼按鈕後方深色色調的強度。";
 "prefs.subtitle.active_scale" = "密碼按鈕按下時的縮放大小。";
 "prefs.subtitle.active_light_tint_alpha" = "密碼按鈕按下時淺色色調的強度。";
-"prefs.subtitle.active_specular" = "密碼按鈕按下時的高光強度。";
-"prefs.subtitle.active_bezel_width" = "密碼按鈕按下時的邊框寬度。";
-"prefs.subtitle.active_refraction" = "密碼按鈕按下時的折射強度。";
-"prefs.subtitle.active_blur" = "密碼按鈕按下時的模糊強度。";
+"prefs.subtitle.motion_highlights" = "Make specular highlights react to device motion.";
+"prefs.subtitle.motion_highlights_fps" = "Caps motion-driven highlight redraws.";
+"prefs.subtitle.motion_highlights_sensitivity" = "How strongly tilt changes the highlight angle.";
 "prefs.subtitle.press_in_damping" = "密碼按鈕按下動畫的彈簧阻尼。";
 "prefs.subtitle.press_in_duration" = "密碼按鈕按下過渡動畫的時長。";
 "prefs.subtitle.press_in_mass" = "密碼按鈕按下動畫的彈簧質量。";
@@ -140,6 +138,8 @@
 "prefs.section.surface_tint_override.subtitle" = "為單一介面覆蓋色調模式。跟隨系統將使用目前系統外觀";
 "prefs.section.display_link_toggle.title" = "手動 Display-Link 開關";
 "prefs.section.display_link_toggle.subtitle" = "選擇允許哪些介面執行由 Display-Link 驅動的玻璃更新。";
+"prefs.section.motion_highlights.title" = "Motion Highlights";
+"prefs.section.motion_highlights.subtitle" = "Use device motion to steer glass specular highlights.";
 
 "prefs.button.reset" = "重置";
 "prefs.button.reset_all" = "全部重置";

@@ -16,6 +16,8 @@ static LGDisplayLinkState sLockDisplayLinkState = {0};
 
 static void LGLockscreenInjectGlassWithImageAndSettingsForMode(UIView *host,
                                                                NSString *renderingModeKey,
+                                                               BOOL hasFeatureEnabledOverride,
+                                                               BOOL featureEnabledOverride,
                                                                UIImage *wallpaper,
                                                                CGPoint wallpaperOrigin,
                                                                LGUpdateGroup updateGroup,
@@ -39,6 +41,7 @@ BOOL LGIsLockscreenQuickActionsHost(UIView *view);
 
 BOOL LGLockscreenEnabled(void) { return LG_globalEnabled() && LG_prefBool(@"Lockscreen.Enabled", YES); }
 static BOOL LGLockscreenQuickActionsFeatureEnabled(void) { return LG_globalEnabled() && LG_prefBool(@"LockscreenQuickActions.Enabled", YES); }
+static BOOL LGLockscreenPasscodeFeatureEnabled(void) { return LG_globalEnabled() && LG_prefBool(@"Lockscreen.Passcode.Enabled", YES); }
 CGFloat LGLockscreenCornerRadius(void) { return LG_prefFloat(@"Lockscreen.CornerRadius", 18.5); }
 LG_FLOAT_PREF_FUNC(LGLockscreenBezelWidth, "Lockscreen.BezelWidth", 12.0)
 LG_FLOAT_PREF_FUNC(LGLockscreenGlassThickness, "Lockscreen.GlassThickness", 80.0)
@@ -91,9 +94,10 @@ static void LGEnsureLockscreenTintOverlay(UIView *host,
 }
 
 static void LGStartLockDisplayLink(void) {
-    if (!LGLockscreenEnabled() && !LGLockscreenQuickActionsFeatureEnabled()) return;
+    if (!LGLockscreenEnabled() && !LGLockscreenQuickActionsFeatureEnabled() && !LGLockscreenPasscodeFeatureEnabled()) return;
     BOOL live = LG_prefersLiveCapture(@"Lockscreen.RenderingMode") ||
-                LG_prefersLiveCapture(@"LockscreenQuickActions.RenderingMode");
+                LG_prefersLiveCapture(@"LockscreenQuickActions.RenderingMode") ||
+                LG_prefersLiveCapture(@"Lockscreen.Passcode.RenderingMode");
     NSInteger fps = live
         ? LGPreferredLiveCaptureFramesPerSecond(LGLockscreenLiveCaptureFPS())
         : LGPreferredFramesPerSecondForKey(@"Lockscreen.FPS", 1);
@@ -102,7 +106,8 @@ static void LGStartLockDisplayLink(void) {
                                              @"DisplayLink.Lockscreen.Enabled",
                                              ^{
         BOOL nextLive = LG_prefersLiveCapture(@"Lockscreen.RenderingMode") ||
-                        LG_prefersLiveCapture(@"LockscreenQuickActions.RenderingMode");
+                        LG_prefersLiveCapture(@"LockscreenQuickActions.RenderingMode") ||
+                        LG_prefersLiveCapture(@"Lockscreen.Passcode.RenderingMode");
         NSInteger nextFPS = nextLive
             ? LGPreferredLiveCaptureFramesPerSecond(LGLockscreenLiveCaptureFPS())
             : LGPreferredFramesPerSecondForKey(@"Lockscreen.FPS", 1);
@@ -294,6 +299,48 @@ void LGLockscreenInjectGlassWithSettingsAndMode(UIView *host,
     CGPoint wallpaperOrigin = LG_getLockscreenWallpaperOrigin();
     LGLockscreenInjectGlassWithImageAndSettingsForMode(host,
                                                        renderingModeKey,
+                                                       NO,
+                                                       NO,
+                                                       wallpaper,
+                                                       wallpaperOrigin,
+                                                       LGUpdateGroupLockscreen,
+                                                       cornerRadius,
+                                                       bezelWidth,
+                                                       glassThickness,
+                                                       refractionScale,
+                                                       refractiveIndex,
+                                                       specularOpacity,
+                                                       blur,
+                                                       wallpaperScale,
+                                                       lightTintAlpha,
+                                                       darkTintAlpha);
+}
+
+void LGLockscreenInjectGlassWithSettingsAndModeForFeatureEnabled(UIView *host,
+                                                                 NSString *renderingModeKey,
+                                                                 BOOL featureEnabled,
+                                                                 CGFloat cornerRadius,
+                                                                 CGFloat bezelWidth,
+                                                                 CGFloat glassThickness,
+                                                                 CGFloat refractionScale,
+                                                                 CGFloat refractiveIndex,
+                                                                 CGFloat specularOpacity,
+                                                                 CGFloat blur,
+                                                                 CGFloat wallpaperScale,
+                                                                 CGFloat lightTintAlpha,
+                                                                 CGFloat darkTintAlpha) {
+    UIImage *wallpaper = LGGetLockscreenSnapshotCached();
+    if (!wallpaper && !LG_prefersLiveCapture(renderingModeKey)) {
+        LGDebugLog(@"lockscreen inject bail reason=no-snapshot key=%@ host=%@",
+                   renderingModeKey,
+                   host ? NSStringFromClass(host.class) : @"(null)");
+        return;
+    }
+    CGPoint wallpaperOrigin = LG_getLockscreenWallpaperOrigin();
+    LGLockscreenInjectGlassWithImageAndSettingsForMode(host,
+                                                       renderingModeKey,
+                                                       YES,
+                                                       featureEnabled,
                                                        wallpaper,
                                                        wallpaperOrigin,
                                                        LGUpdateGroupLockscreen,
@@ -325,6 +372,8 @@ void LGLockscreenInjectGlassWithImageAndSettings(UIView *host,
                                                  CGFloat darkTintAlpha) {
     LGLockscreenInjectGlassWithImageAndSettingsForMode(host,
                                                        @"Lockscreen.RenderingMode",
+                                                       NO,
+                                                       NO,
                                                        wallpaper,
                                                        wallpaperOrigin,
                                                        updateGroup,
@@ -342,6 +391,8 @@ void LGLockscreenInjectGlassWithImageAndSettings(UIView *host,
 
 static void LGLockscreenInjectGlassWithImageAndSettingsForMode(UIView *host,
                                                                NSString *renderingModeKey,
+                                                               BOOL hasFeatureEnabledOverride,
+                                                               BOOL featureEnabledOverride,
                                                                UIImage *wallpaper,
                                                                CGPoint wallpaperOrigin,
                                                                LGUpdateGroup updateGroup,
@@ -359,7 +410,9 @@ static void LGLockscreenInjectGlassWithImageAndSettingsForMode(UIView *host,
     NSString *resolvedRenderingModeKey = renderingModeKey.length
         ? renderingModeKey
         : (quickActionsHost ? @"LockscreenQuickActions.RenderingMode" : @"Lockscreen.RenderingMode");
-    BOOL featureEnabled = quickActionsHost ? LGLockscreenQuickActionsFeatureEnabled() : LGLockscreenEnabled();
+    BOOL featureEnabled = hasFeatureEnabledOverride
+        ? featureEnabledOverride
+        : (quickActionsHost ? LGLockscreenQuickActionsFeatureEnabled() : LGLockscreenEnabled());
     if (!featureEnabled) {
         LGDebugLog(@"lockscreen inject bail reason=disabled host=%@",
                    host ? NSStringFromClass(host.class) : @"(null)");

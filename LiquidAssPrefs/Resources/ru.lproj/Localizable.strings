@@ -36,10 +36,6 @@
 "prefs.control.background_dark_tint_alpha" = "Прозрачность темного фона";
 "prefs.control.active_scale" = "Активный масштаб";
 "prefs.control.active_light_tint_alpha" = "Прозрачность активного светлого оттенка";
-"prefs.control.active_specular" = "Активные блики";
-"prefs.control.active_bezel_width" = "Активная ширина рамки";
-"prefs.control.active_refraction" = "Активное преломление";
-"prefs.control.active_blur" = "Активное размытие";
 "prefs.control.press_in_damping" = "Затухание пружины при нажатии";
 "prefs.control.press_in_duration" = "Длительность анимации нажатия";
 "prefs.control.press_in_mass" = "Масса пружины при нажатии";
@@ -50,6 +46,9 @@
 "prefs.control.release_mass" = "Масса пружины при отпускании";
 "prefs.control.release_stiffness" = "Жесткость пружины при отпускании";
 "prefs.control.release_velocity" = "Начальная скорость пружины при отпускании";
+"prefs.control.motion_highlights" = "Блики по движению";
+"prefs.control.motion_highlights_fps" = "FPS движения";
+"prefs.control.motion_highlights_sensitivity" = "Чувствительность движения";
 
 "prefs.subtitle.enabled" = "Включение или выключение этого эффекта стекла.";
 "prefs.subtitle.bezel_width" = "Толщина края стеклянного эффекта.";
@@ -73,10 +72,6 @@
 "prefs.subtitle.background_dark_tint_alpha" = "Интенсивность темного оттенка за кнопками ввода пароля.";
 "prefs.subtitle.active_scale" = "Масштаб кнопки ввода пароля при нажатии.";
 "prefs.subtitle.active_light_tint_alpha" = "Интенсивность светлого оттенка кнопки ввода пароля при нажатии.";
-"prefs.subtitle.active_specular" = "Интенсивность бликов кнопки ввода пароля при нажатии.";
-"prefs.subtitle.active_bezel_width" = "Ширина рамки кнопки ввода пароля при нажатии.";
-"prefs.subtitle.active_refraction" = "Интенсивность преломления кнопки ввода пароля при нажатии.";
-"prefs.subtitle.active_blur" = "Размытие кнопки ввода пароля при нажатии.";
 "prefs.subtitle.press_in_damping" = "Затухание пружины при анимации нажатия кнопки пароля.";
 "prefs.subtitle.press_in_duration" = "Длительность перехода при нажатии кнопки пароля.";
 "prefs.subtitle.press_in_mass" = "Масса пружины при анимации нажатия кнопки пароля.";
@@ -87,6 +82,9 @@
 "prefs.subtitle.release_mass" = "Масса пружины при анимации отпускания кнопки пароля.";
 "prefs.subtitle.release_stiffness" = "Жесткость пружины при анимации отпускания кнопки пароля.";
 "prefs.subtitle.release_velocity" = "Начальная скорость пружины при анимации отпускания кнопки пароля.";
+"prefs.subtitle.motion_highlights" = "Делает блики стекла зависимыми от движения устройства.";
+"prefs.subtitle.motion_highlights_fps" = "Ограничивает частоту обновления бликов по движению.";
+"prefs.subtitle.motion_highlights_sensitivity" = "Насколько сильно наклон меняет угол блика.";
 "prefs.subtitle.rendering_method" = "Выберите, берет ли эта поверхность данные из кэшированных снимков экрана или из живого захвата фона.";
 "prefs.subtitle.font_weight" = "Насыщенность, используемая для старых стеклянных часов из iOS 15 и ниже.";
 "prefs.subtitle.font_style" = "Переключает старые часы iOS 15 между обычным, закругленным и стилем iOS 26.";
@@ -137,6 +135,8 @@
 "prefs.section.surface_tint_override.subtitle" = "Настройка режима оттенка для отдельных поверхностей. Вариант «По системе» использует текущее системное оформление.";
 "prefs.section.display_link_toggle.title" = "Ручной переключатель Display-Link";
 "prefs.section.display_link_toggle.subtitle" = "Выберите, каким поверхностям разрешено обновлять стеклянный эффект через Display-Link.";
+"prefs.section.motion_highlights.title" = "Блики по движению";
+"prefs.section.motion_highlights.subtitle" = "Использует движение устройства для управления бликами стекла.";
 
 "prefs.button.reset" = "Сбросить";
 "prefs.button.reset_all" = "Сбросить все";

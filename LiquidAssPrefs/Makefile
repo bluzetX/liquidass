@@ -7,7 +7,7 @@ PREF_SHARED_FILES := $(wildcard ../Shared/*.m)
 PREF_RUNTIME_FILES := $(wildcard ../Runtime/*.m)
 PREF_LOCAL_FILES := LGPRootListController.m LGPSurfaceController.m LGPrefsDataSupport.m LGPrefsUIHelpers.m LGPrefsRuntimeShims.m
 LiquidAssPrefs_FILES = $(PREF_LOCAL_FILES) $(PREF_SHARED_FILES) $(PREF_RUNTIME_FILES)
-LiquidAssPrefs_FRAMEWORKS = UIKit MetalKit MetalPerformanceShaders
+LiquidAssPrefs_FRAMEWORKS = UIKit MetalKit MetalPerformanceShaders CoreMotion CoreLocation
 LiquidAssPrefs_INSTALL_PATH = /Library/PreferenceBundles
 LiquidAssPrefs_CFLAGS = -fobjc-arc -I../Shared -I../Runtime -DLG_PACKAGE_VERSION=@\"$(LG_PACKAGE_VERSION)\"
 ifeq ($(findstring simulator,$(TARGET)),simulator)

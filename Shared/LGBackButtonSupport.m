@@ -22,6 +22,8 @@ static const CGFloat kLGBackButtonReleaseMass = 0.8;
 static const CGFloat kLGBackButtonReleaseStiffness = 300.0;
 static const CGFloat kLGBackButtonReleaseDamping = 8.5;
 static const CGFloat kLGBackButtonReleaseVelocity = 1.35;
+static const CGFloat kLGBackButtonSideLength = 44.0;
+static const CGFloat kLGBackButtonGlyphSideLength = 24.0;
 static const CGFloat kLGLowFallbackBlurRadius = 3.0;
 static const CFTimeInterval kLGBackButtonRefreshInterval = 1.0 / 30.0;
 
@@ -194,7 +196,7 @@ UIView *LGBackButtonPreferredContainerView(UIView *view) {
 }
 
 - (instancetype)initWithTarget:(id)target action:(SEL)action symbolName:(NSString *)symbolName {
-    self = [super initWithFrame:CGRectMake(0, 0, 38, 38)];
+    self = [super initWithFrame:CGRectMake(0, 0, kLGBackButtonSideLength, kLGBackButtonSideLength)];
     if (!self) return nil;
 
     NSString *resolvedSymbolName = symbolName.length ? symbolName : @"chevron.left";
@@ -252,7 +254,7 @@ UIView *LGBackButtonPreferredContainerView(UIView *view) {
     [self addSubview:_button];
 
     UIImageSymbolConfiguration *config =
-        [UIImageSymbolConfiguration configurationWithPointSize:22.0 weight:UIImageSymbolWeightSemibold];
+        [UIImageSymbolConfiguration configurationWithPointSize:24.0 weight:UIImageSymbolWeightRegular];
     _glyphView = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:resolvedSymbolName
                                                              withConfiguration:config]];
     _glyphView.tintColor = UIColor.labelColor;
@@ -265,11 +267,15 @@ UIView *LGBackButtonPreferredContainerView(UIView *view) {
         [_button.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
         [_button.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
         [_button.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
-        [_button.widthAnchor constraintEqualToConstant:38.0],
-        [_button.heightAnchor constraintEqualToConstant:38.0],
+        [_button.widthAnchor constraintEqualToConstant:kLGBackButtonSideLength],
+        [_button.heightAnchor constraintEqualToConstant:kLGBackButtonSideLength],
     ]];
 
     return self;
+}
+
+- (CGSize)intrinsicContentSize {
+    return CGSizeMake(kLGBackButtonSideLength, kLGBackButtonSideLength);
 }
 
 - (void)didMoveToWindow {
@@ -297,10 +303,10 @@ UIView *LGBackButtonPreferredContainerView(UIView *view) {
     self.tintView.frame = self.glassView.bounds;
     self.tintView.backgroundColor = LGCustomTintColorForKey(@"Preferences.BackButton.CustomTintColor") ?: [UIColor colorWithWhite:1.0 alpha:0.10];
     self.tintView.layer.cornerRadius = side * 0.5;
-    self.glyphView.frame = CGRectMake(floor((CGRectGetWidth(self.bounds) - 22.0) * 0.5) + self.glyphHorizontalOffset,
-                                      floor((CGRectGetHeight(self.bounds) - 22.0) * 0.5),
-                                      22.0,
-                                      22.0);
+    self.glyphView.frame = CGRectMake(floor((CGRectGetWidth(self.bounds) - kLGBackButtonGlyphSideLength) * 0.5) + self.glyphHorizontalOffset,
+                                      floor((CGRectGetHeight(self.bounds) - kLGBackButtonGlyphSideLength) * 0.5),
+                                      kLGBackButtonGlyphSideLength,
+                                      kLGBackButtonGlyphSideLength);
 }
 
 - (void)setGlassEnabled:(BOOL)glassEnabled {

@@ -129,6 +129,22 @@ static void LG_updateGlassHashTable(NSHashTable *table) {
     }
 }
 
+static void LG_redrawGlassHashTable(NSHashTable *table) {
+    if (!table.count) return;
+    CGRect screenBounds = LG_activeScreenCoordinateBounds();
+    for (LiquidGlassView *glass in table) {
+        if (!glass.superview) continue;
+        if (!glass.window) continue;
+        if (glass.hidden || glass.alpha <= 0.01f || glass.layer.opacity <= 0.01f) continue;
+        if (CGRectIsEmpty(glass.bounds)) continue;
+        if (glass.updateGroup != LGUpdateGroupLockscreen) {
+            CGRect approxRect = [glass convertRect:glass.bounds toView:nil];
+            if (!CGRectIntersectsRect(CGRectInset(screenBounds, -64.0, -64.0), approxRect)) continue;
+        }
+        [glass scheduleDraw];
+    }
+}
+
 void LG_updateRegisteredGlassViews(LGUpdateGroup group) {
     LGAssertMainThread();
     if (group == LGUpdateGroupAll) {
@@ -138,6 +154,17 @@ void LG_updateRegisteredGlassViews(LGUpdateGroup group) {
     }
     if (group <= LGUpdateGroupAll || group > LGUpdateGroupControlCenter) return;
     LG_updateGlassHashTable(sRegisteredGlassViews[group]);
+}
+
+void LG_redrawRegisteredGlassViews(LGUpdateGroup group) {
+    LGAssertMainThread();
+    if (group == LGUpdateGroupAll) {
+        for (NSInteger i = LGUpdateGroupDock; i <= LGUpdateGroupControlCenter; i++)
+            LG_redrawGlassHashTable(sRegisteredGlassViews[i]);
+        return;
+    }
+    if (group <= LGUpdateGroupAll || group > LGUpdateGroupControlCenter) return;
+    LG_redrawGlassHashTable(sRegisteredGlassViews[group]);
 }
 
 UIWindow *LG_getHomescreenWindow(void) {

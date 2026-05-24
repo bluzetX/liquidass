@@ -24,6 +24,7 @@ void     LG_updateAllGlassViewsInTree(UIView *root);
 void     LG_registerGlassView(UIView *view, LGUpdateGroup group);
 void     LG_unregisterGlassView(UIView *view, LGUpdateGroup group);
 void     LG_updateRegisteredGlassViews(LGUpdateGroup group);
+void     LG_redrawRegisteredGlassViews(LGUpdateGroup group);
 BOOL     LG_isFullScreenDevice(void);
 UIWindow *LG_getHomescreenWindow(void);
 BOOL     LG_hasHomescreenWallpaperAsset(void);
@@ -74,5 +75,6 @@ void     LGInvalidateLockscreenSnapshotCache(void);
 LG_EXPORT void LG_registerGlassView(UIView *view, LGUpdateGroup group);
 LG_EXPORT void LG_unregisterGlassView(UIView *view, LGUpdateGroup group);
 LG_EXPORT void LG_updateRegisteredGlassViews(LGUpdateGroup group);
+LG_EXPORT void LG_redrawRegisteredGlassViews(LGUpdateGroup group);
 
 @end

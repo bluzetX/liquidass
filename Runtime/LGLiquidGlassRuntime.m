@@ -1,5 +1,7 @@
 #import "LGLiquidGlassRuntime.h"
 #import "../Shared/LGSharedSupport.h"
+#import <CoreLocation/CoreLocation.h>
+#import <CoreMotion/CoreMotion.h>
 #import <CoreVideo/CoreVideo.h>
 #import <MetalPerformanceShaders/MetalPerformanceShaders.h>
 #include <stdatomic.h>
@@ -24,6 +26,215 @@ typedef struct {
     float samplingOrientation;
     float hasShapeMask;
 } LGUniforms;
+
+static CMMotionManager *sSpecularMotionManager = nil;
+static NSOperationQueue *sSpecularMotionQueue = nil;
+static CLLocationManager *sSpecularHeadingManager = nil;
+static id sSpecularHeadingDelegate = nil;
+static BOOL sSpecularMotionRunning = NO;
+static CGFloat sSpecularMotionAngle = 0.0;
+static CGFloat sSpecularMotionGyroOffset = 0.0;
+static CGFloat sSpecularHeadingRadians = 0.0;
+static CFTimeInterval sSpecularHeadingLastUpdate = 0.0;
+static CFTimeInterval sSpecularMotionLastSampleTime = 0.0;
+static CFTimeInterval sSpecularMotionLastRedraw = 0.0;
+static CFTimeInterval sSpecularMotionLastDebugLog = 0.0;
+static CFTimeInterval sSpecularMotionLastDrawDebugLog = 0.0;
+
+@interface LGSpecularHeadingDelegate : NSObject <CLLocationManagerDelegate>
+@end
+
+@implementation LGSpecularHeadingDelegate
+- (void)locationManager:(CLLocationManager *)manager didUpdateHeading:(CLHeading *)newHeading {
+    CLLocationDirection heading = newHeading.trueHeading >= 0.0 ? newHeading.trueHeading : newHeading.magneticHeading;
+    if (heading < 0.0) return;
+    sSpecularHeadingRadians = heading * (M_PI / 180.0);
+    sSpecularHeadingLastUpdate = CACurrentMediaTime();
+    if (manager.headingOrientation != CLDeviceOrientationUnknown) return;
+    UIInterfaceOrientation orientation = UIInterfaceOrientationUnknown;
+    if (@available(iOS 13.0, *)) {
+        orientation = UIApplication.sharedApplication.connectedScenes.anyObject
+            ? ((UIWindowScene *)UIApplication.sharedApplication.connectedScenes.anyObject).interfaceOrientation
+            : UIInterfaceOrientationUnknown;
+    } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        orientation = UIApplication.sharedApplication.statusBarOrientation;
+#pragma clang diagnostic pop
+    }
+    manager.headingOrientation = orientation;
+}
+
+- (BOOL)locationManagerShouldDisplayHeadingCalibration:(CLLocationManager *)manager {
+    return NO;
+}
+
+- (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error {
+    LGDebugLog(@"[SpecularMotion] heading error: %@ (code %ld)",
+               error.localizedDescription, (long)error.code);
+}
+@end
+
+static BOOL LGSpecularMotionEnabled(void) {
+    return LG_globalEnabled() && LG_prefBool(@"Specular.Motion.Enabled", NO);
+}
+
+static CGFloat LGSpecularMotionFPS(void) {
+    return MAX(1.0, MIN(60.0, LG_prefFloat(@"Specular.Motion.FPS", 30.0)));
+}
+
+static CGFloat LGSpecularMotionSensitivity(void) {
+    return MAX(0.0, MIN(8.0, LG_prefFloat(@"Specular.Motion.Sensitivity", 1.5)));
+}
+
+static CGFloat LGSpecularMotionCurrentAngle(void) {
+    return LGSpecularMotionEnabled() ? sSpecularMotionAngle : 0.0;
+}
+
+static void LGSpecularMotionStop(void) {
+    if (!sSpecularMotionRunning) return;
+    LGDebugLog(@"[SpecularMotion] stopping device motion and heading updates");
+    [sSpecularMotionManager stopDeviceMotionUpdates];
+    [sSpecularHeadingManager stopUpdatingHeading];
+    sSpecularMotionRunning = NO;
+    sSpecularMotionGyroOffset = 0.0;
+    sSpecularHeadingLastUpdate = 0.0;
+    sSpecularMotionLastSampleTime = 0.0;
+}
+
+static void LGSpecularMotionConfigure(void) {
+    if (!LGSpecularMotionEnabled()) {
+        LGDebugLog(@"[SpecularMotion] configure called but motion disabled — stopping");
+        LGSpecularMotionStop();
+        return;
+    }
+    if (!sSpecularMotionManager) {
+        sSpecularMotionManager = [CMMotionManager new];
+        sSpecularMotionQueue = [NSOperationQueue mainQueue];
+        LGDebugLog(@"[SpecularMotion] created CMMotionManager");
+    }
+    if (!sSpecularHeadingManager && [CLLocationManager headingAvailable]) {
+        sSpecularHeadingManager = [CLLocationManager new];
+        sSpecularHeadingDelegate = [LGSpecularHeadingDelegate new];
+        sSpecularHeadingManager.delegate = sSpecularHeadingDelegate;
+        sSpecularHeadingManager.headingFilter = 1.0;
+        LGDebugLog(@"[SpecularMotion] created CLLocationManager headingAvailable=1 servicesEnabled=%d auth=%ld",
+                   [CLLocationManager locationServicesEnabled],
+                   (long)sSpecularHeadingManager.authorizationStatus);
+    } else if (![CLLocationManager headingAvailable]) {
+        LGDebugLog(@"[SpecularMotion] headingAvailable=NO; falling back to gravity angle");
+    }
+    if (!sSpecularMotionManager.deviceMotionAvailable) {
+        LGDebugLog(@"[SpecularMotion] deviceMotionAvailable=NO — cannot start");
+        return;
+    }
+
+    NSTimeInterval interval = 1.0 / LGSpecularMotionFPS();
+    sSpecularMotionManager.deviceMotionUpdateInterval = interval;
+    LGDebugLog(@"[SpecularMotion] configure: fps=%.1f interval=%.4fs sensitivity=%.2f alreadyRunning=%d",
+               LGSpecularMotionFPS(), interval, LGSpecularMotionSensitivity(), sSpecularMotionRunning);
+    if (sSpecularMotionRunning) return;
+
+    sSpecularMotionRunning = YES;
+    LGDebugLog(@"[SpecularMotion] starting device motion updates");
+    if (sSpecularHeadingManager) {
+        [sSpecularHeadingManager startUpdatingHeading];
+        LGDebugLog(@"[SpecularMotion] starting heading updates");
+    }
+    __weak CMMotionManager *weakManager = sSpecularMotionManager;
+    [sSpecularMotionManager startDeviceMotionUpdatesToQueue:sSpecularMotionQueue
+                                                withHandler:^(CMDeviceMotion *motion, NSError *error) {
+        if (error) {
+            LGDebugLog(@"[SpecularMotion] CMDeviceMotion error: %@ (code %ld) — stopping",
+                       error.localizedDescription, (long)error.code);
+            LGSpecularMotionStop();
+            return;
+        }
+        if (!motion) {
+            LGDebugLog(@"[SpecularMotion] nil motion object received — stopping");
+            LGSpecularMotionStop();
+            return;
+        }
+        if (!LGSpecularMotionEnabled()) {
+            LGDebugLog(@"[SpecularMotion] pref disabled mid-flight — stopping");
+            LGSpecularMotionStop();
+            return;
+        }
+        CGFloat sensitivity = LGSpecularMotionSensitivity();
+        CMAcceleration gravity = motion.gravity;
+        CMRotationRate rotation = motion.rotationRate;
+        CFTimeInterval now = CACurrentMediaTime();
+        CFTimeInterval sampleTime = motion.timestamp > 0.0 ? motion.timestamp : now;
+        CFTimeInterval dt = sSpecularMotionLastSampleTime > 0.0
+            ? MAX(1.0 / 120.0, MIN(0.1, sampleTime - sSpecularMotionLastSampleTime))
+            : (1.0 / LGSpecularMotionFPS());
+        sSpecularMotionLastSampleTime = sampleTime;
+
+        CGFloat planeX = gravity.x;
+        CGFloat planeY = -gravity.y;
+        CGFloat tiltMagnitude = MIN(1.0, hypot(planeX, planeY) / 0.65);
+        CGFloat gravityAngle = atan2(planeX, planeY);
+        BOOL hasFreshHeading = sSpecularHeadingLastUpdate > 0.0 && now - sSpecularHeadingLastUpdate <= 5.0;
+        CGFloat compassAngle = hasFreshHeading ? sSpecularHeadingRadians : gravityAngle;
+        CGFloat gyroSpin = rotation.y - rotation.x + rotation.z * 0.35;
+        CGFloat response = 0.75 + sensitivity * 0.85;
+        sSpecularMotionGyroOffset += gyroSpin * dt * response;
+        sSpecularMotionGyroOffset *= MAX(0.0, 1.0 - dt * 3.6);
+
+        CGFloat headingWeight = hasFreshHeading ? 1.0 : tiltMagnitude;
+        CGFloat target = -compassAngle * headingWeight * response + sSpecularMotionGyroOffset;
+        CGFloat prevAngle = sSpecularMotionAngle;
+        CGFloat diff = target - sSpecularMotionAngle;
+        while (diff >  M_PI) diff -= 2.0 * M_PI;
+        while (diff < -M_PI) diff += 2.0 * M_PI;
+        sSpecularMotionAngle = sSpecularMotionAngle + diff * 0.34;
+
+        CGFloat fps = LGSpecularMotionFPS();
+        CFTimeInterval sinceLast = now - sSpecularMotionLastRedraw;
+        BOOL willRedraw = sinceLast >= 1.0 / fps;
+
+        if (now - sSpecularMotionLastDebugLog >= 0.25) {
+            sSpecularMotionLastDebugLog = now;
+            LGDebugLog(@"[SpecularMotion] headingFresh=%d heading=%.3f gravity={%.3f,%.3f,%.3f} rotation={%.3f,%.3f,%.3f} "
+                       @"tiltMag=%.3f gravityAngle=%.3f compassAngle=%.3f gyroOffset=%.3f target=%.3f "
+                       @"prev=%.3f smoothed=%.3f delta=%.3f dt=%.3f | sinceLast=%.4fs fps=%.1f willRedraw=%d",
+                       hasFreshHeading, sSpecularHeadingRadians,
+                       gravity.x, gravity.y, gravity.z,
+                       rotation.x, rotation.y, rotation.z,
+                       tiltMagnitude, gravityAngle, compassAngle, sSpecularMotionGyroOffset, target,
+                       prevAngle, sSpecularMotionAngle, sSpecularMotionAngle - prevAngle,
+                       dt, sinceLast, fps, willRedraw);
+        }
+
+        if (willRedraw) {
+            sSpecularMotionLastRedraw = now;
+            LG_redrawRegisteredGlassViews(LGUpdateGroupAll);
+        }
+
+        CMMotionManager *manager = weakManager;
+        if (manager && fabs(manager.deviceMotionUpdateInterval - (1.0 / fps)) > 0.001) {
+            LGDebugLog(@"[SpecularMotion] correcting update interval: was %.4f want %.4f",
+                       manager.deviceMotionUpdateInterval, 1.0 / fps);
+            manager.deviceMotionUpdateInterval = 1.0 / fps;
+        }
+    }];
+}
+
+__attribute__((constructor))
+static void LGSpecularMotionInit(void) {
+    if (!LGIsSpringBoardProcess() && !LGIsPreferencesProcess()) return;
+    LGDebugLog(@"[SpecularMotion] init — process eligible, scheduling configure on main queue");
+    dispatch_async(dispatch_get_main_queue(), ^{
+        LGDebugLog(@"[SpecularMotion] initial configure (enabled=%d)", LGSpecularMotionEnabled());
+        LGSpecularMotionConfigure();
+        LGObservePreferenceChanges(^{
+            dispatch_async(dispatch_get_main_queue(), ^{
+                LGDebugLog(@"[SpecularMotion] pref changed — reconfiguring (enabled=%d)", LGSpecularMotionEnabled());
+                LGSpecularMotionConfigure();
+            });
+        });
+    });
+}
 
 static float LG_samplingOrientationForGlassView(__unused UIView *view, __unused LGUpdateGroup group) {
     // Visual rects are already converted into UIScreen.coordinateSpace. Sampling in
@@ -1010,6 +1221,17 @@ void LGPrewarmPipelines(void) {
         }
     }
 
+    CGFloat specularAngleForDraw = LGSpecularMotionCurrentAngle();
+    CFTimeInterval motionDrawLogNow = CACurrentMediaTime();
+    if (LGSpecularMotionEnabled() && motionDrawLogNow - sSpecularMotionLastDrawDebugLog >= 0.5) {
+        sSpecularMotionLastDrawDebugLog = motionDrawLogNow;
+        LGDebugLog(@"[SpecularMotion] drawInMTKView group=%ld specularAngle=%.4f (%.1f°) opacity=%.2f",
+                   (long)_updateGroup,
+                   specularAngleForDraw,
+                   specularAngleForDraw * (180.0 / M_PI),
+                   _specularOpacity);
+    }
+
     id<MTLRenderCommandEncoder> enc =
         [cmdBuf renderCommandEncoderWithDescriptor:passDesc];
     LGUniforms u = {
@@ -1024,7 +1246,7 @@ void LGPrewarmPipelines(void) {
         .refractionScale = (float)_refractionScale,
         .refractiveIndex = (float)_refractiveIndex,
         .specularOpacity = (float)_specularOpacity,
-        .specularAngle = 2.2689280f,
+        .specularAngle = (float)specularAngleForDraw,
         .blur = blurPx,
         .wallpaperOrigin = { (float)(_wallpaperOriginPt.x * scale),
                              (float)(_wallpaperOriginPt.y * scale) },

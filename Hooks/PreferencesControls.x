@@ -477,7 +477,7 @@ static void LGSettingsInstallBackButtonGlass(UIView *buttonBarButton, UIView *co
     }
     objc_setAssociatedObject(container, kLGSettingsBackButtonTargetKey, buttonBarButton, OBJC_ASSOCIATION_ASSIGN);
 
-    CGSize buttonSize = CGSizeMake(38.0, 38.0);
+    CGSize buttonSize = CGSizeMake(44.0, 44.0);
     CGRect buttonBounds = CGRectIsEmpty(buttonBarButton.bounds)
         ? CGRectMake(0.0, 0.0, buttonSize.width, buttonSize.height)
         : buttonBarButton.bounds;

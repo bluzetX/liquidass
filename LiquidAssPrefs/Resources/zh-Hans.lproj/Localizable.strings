@@ -33,6 +33,9 @@
 "prefs.control.home_button_radius" = "Home 按钮圆角";
 "prefs.control.icon_spacing" = "图标间距";
 "prefs.control.row_inset" = "行内边距";
+"prefs.control.motion_highlights" = "Motion Highlights";
+"prefs.control.motion_highlights_fps" = "Motion FPS";
+"prefs.control.motion_highlights_sensitivity" = "Motion Sensitivity";
 
 "prefs.subtitle.enabled" = "开启或关闭此玻璃视图";
 "prefs.subtitle.bezel_width" = "玻璃视图边缘的厚度";
@@ -53,6 +56,9 @@
 "prefs.subtitle.home_button_radius" = "带 Home 按钮设备上玻璃视图的圆角程度";
 "prefs.subtitle.icon_spacing" = "图标与标签之间的间距";
 "prefs.subtitle.row_inset" = "操作行的左右内边距";
+"prefs.subtitle.motion_highlights" = "Make specular highlights react to device motion.";
+"prefs.subtitle.motion_highlights_fps" = "Caps motion-driven highlight redraws.";
+"prefs.subtitle.motion_highlights_sensitivity" = "How strongly tilt changes the highlight angle.";
 "prefs.subtitle.rendering_method" = "选择该界面使用缓存快照还是实时背景捕捉";
 "prefs.subtitle.font_weight" = "用于旧版 iOS 15 及以下玻璃时钟的字重";
 "prefs.subtitle.font_style" = "在常规样式和圆角样式之间切换旧版 iOS 15 时钟";
@@ -100,6 +106,8 @@
 "prefs.section.surface_tint_override.subtitle" = "为单个界面覆盖色调模式。跟随系统将使用当前系统外观";
 "prefs.section.display_link_toggle.title" = "Manual Display-Link Toggle";
 "prefs.section.display_link_toggle.subtitle" = "Choose which surfaces are allowed to run display-link driven glass updates.";
+"prefs.section.motion_highlights.title" = "Motion Highlights";
+"prefs.section.motion_highlights.subtitle" = "Use device motion to steer glass specular highlights.";
 
 "prefs.button.reset" = "重置";
 "prefs.button.reset_all" = "Reset all";
@@ -224,10 +232,6 @@
 "prefs.control.background_dark_tint_alpha" = "背景深色着色透明度";
 "prefs.control.active_scale" = "按下时缩放";
 "prefs.control.active_light_tint_alpha" = "按下时浅色着色透明度";
-"prefs.control.active_specular" = "按下时高光";
-"prefs.control.active_bezel_width" = "按下时边框宽度";
-"prefs.control.active_refraction" = "按下时折射";
-"prefs.control.active_blur" = "按下时模糊";
 "prefs.control.press_in_damping" = "按下时阻尼";
 "prefs.control.press_in_duration" = "按下时长";
 "prefs.control.press_in_mass" = "按下时质量";
@@ -241,10 +245,6 @@
 "prefs.subtitle.background_dark_tint_alpha" = "密码按钮后方深色着色的强度。";
 "prefs.subtitle.active_scale" = "密码按钮按下时的缩放大小。";
 "prefs.subtitle.active_light_tint_alpha" = "密码按钮按下时浅色着色的强度。";
-"prefs.subtitle.active_specular" = "密码按钮按下时的高光强度。";
-"prefs.subtitle.active_bezel_width" = "密码按钮按下时的边框宽度。";
-"prefs.subtitle.active_refraction" = "密码按钮按下时的折射强度。";
-"prefs.subtitle.active_blur" = "密码按钮按下时的模糊强度。";
 "prefs.subtitle.press_in_damping" = "密码按钮按下动画的弹簧阻尼。";
 "prefs.subtitle.press_in_duration" = "密码按钮按下过渡动画的时长。";
 "prefs.subtitle.press_in_mass" = "密码按钮按下动画的弹簧质量。";

@@ -1581,7 +1581,7 @@ static UIView *LGMakeRespringBar(id target, SEL respringAction, SEL laterAction)
     glassView.refractionScale = 1.5;
     glassView.refractiveIndex = 1.5;
     glassView.specularOpacity = 0.8;
-    glassView.blur = 10.0;
+    glassView.blur = 5.0;
     glassView.sourceScale = 1.0;
     glassView.cornerRadius = 26.0;
     glassView.hidden = YES;

@@ -22,6 +22,7 @@ static void *kLGPasscodeSuppressedHiddenKey = &kLGPasscodeSuppressedHiddenKey;
 static BOOL sLGPasscodeVisible = NO;
 
 static LiquidGlassView *LGPasscodeButtonGlassView(UIView *host);
+static void LGRefreshPasscodeHosts(void);
 static const CFTimeInterval kLGPasscodeMinimumLightTintHold = 0.2;
 static NSString *LGPasscodeRenderingModeKey(void);
 
@@ -37,10 +38,6 @@ LG_FLOAT_PREF_FUNC(LGPasscodeWallpaperScale, "Lockscreen.Passcode.WallpaperScale
 LG_FLOAT_PREF_FUNC(LGPasscodeDarkTintAlpha, "Lockscreen.Passcode.DarkTintAlpha", 0.12)
 LG_FLOAT_PREF_FUNC(LGPasscodeActiveScale, "Lockscreen.Passcode.ActiveScale", 1.16)
 LG_FLOAT_PREF_FUNC(LGPasscodeActiveLightTintAlpha, "Lockscreen.Passcode.ActiveLightTintAlpha", 0.44)
-LG_FLOAT_PREF_FUNC(LGPasscodeActiveSpecularOpacity, "Lockscreen.Passcode.ActiveSpecularOpacity", 1.2)
-LG_FLOAT_PREF_FUNC(LGPasscodeActiveBezelWidth, "Lockscreen.Passcode.ActiveBezelWidth", 36.0)
-LG_FLOAT_PREF_FUNC(LGPasscodeActiveRefractionScale, "Lockscreen.Passcode.ActiveRefractionScale", 1.12)
-LG_FLOAT_PREF_FUNC(LGPasscodeActiveBlur, "Lockscreen.Passcode.ActiveBlur", 2.1)
 LG_FLOAT_PREF_FUNC(LGPasscodePressInMass, "Lockscreen.Passcode.PressInMass", 0.8)
 LG_FLOAT_PREF_FUNC(LGPasscodePressInStiffness, "Lockscreen.Passcode.PressInStiffness", 300.0)
 LG_FLOAT_PREF_FUNC(LGPasscodePressInDamping, "Lockscreen.Passcode.PressInDamping", 18.0)
@@ -51,20 +48,6 @@ LG_FLOAT_PREF_FUNC(LGPasscodeReleaseDamping, "Lockscreen.Passcode.ReleaseDamping
 LG_FLOAT_PREF_FUNC(LGPasscodeReleaseVelocity, "Lockscreen.Passcode.ReleaseVelocity", 1.0)
 LG_FLOAT_PREF_FUNC(LGPasscodePressInDuration, "Lockscreen.Passcode.PressInDuration", 0.3)
 LG_FLOAT_PREF_FUNC(LGPasscodeReleaseDuration, "Lockscreen.Passcode.ReleaseDuration", 0.5)
-
-static UIImage *LGPasscodeCircleMaskImage(CGSize size) {
-    if (size.width <= 0.0 || size.height <= 0.0) return nil;
-    CGFloat scale = UIScreen.mainScreen.scale ?: 1.0;
-    UIGraphicsBeginImageContextWithOptions(size, NO, scale);
-    CGRect rect = (CGRect){CGPointZero, size};
-    [[UIColor clearColor] setFill];
-    UIRectFill(rect);
-    [[UIColor whiteColor] setFill];
-    [[UIBezierPath bezierPathWithOvalInRect:rect] fill];
-    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    return image;
-}
 
 static NSString *LGPasscodeRenderingModeKey(void) {
     return LGHasExplicitPreferenceValue(@"Lockscreen.Passcode.RenderingMode")
@@ -334,22 +317,6 @@ static CGFloat LGPasscodeButtonTargetScale(BOOL highlighted) {
     return highlighted ? LGPasscodeActiveScale() : 1.0;
 }
 
-static CGFloat LGPasscodeButtonTargetSpecular(BOOL highlighted) {
-    return highlighted ? LGPasscodeActiveSpecularOpacity() : LGPasscodeSpecularOpacity();
-}
-
-static CGFloat LGPasscodeButtonTargetBezel(BOOL highlighted) {
-    return highlighted ? LGPasscodeActiveBezelWidth() : LGPasscodeBezelWidth();
-}
-
-static CGFloat LGPasscodeButtonTargetRefraction(BOOL highlighted) {
-    return highlighted ? LGPasscodeActiveRefractionScale() : LGPasscodeRefractionScale();
-}
-
-static CGFloat LGPasscodeButtonTargetBlur(BOOL highlighted) {
-    return highlighted ? LGPasscodeActiveBlur() : LGPasscodeBlur();
-}
-
 static void LGApplyPasscodeButtonSurfaceState(UIView *host, BOOL highlighted) {
     if (!host) return;
     UIView *tint = objc_getAssociatedObject(host, kLGPasscodeButtonTintKey);
@@ -358,10 +325,10 @@ static void LGApplyPasscodeButtonSurfaceState(UIView *host, BOOL highlighted) {
         tint.backgroundColor = LGPasscodeButtonTargetTint(highlighted);
     }
     if (glass) {
-        glass.specularOpacity = LGPasscodeButtonTargetSpecular(highlighted);
-        glass.bezelWidth = LGPasscodeButtonTargetBezel(highlighted);
-        glass.refractionScale = LGPasscodeButtonTargetRefraction(highlighted);
-        glass.blur = LGPasscodeButtonTargetBlur(highlighted);
+        glass.specularOpacity = LGPasscodeSpecularOpacity();
+        glass.bezelWidth = LGPasscodeBezelWidth();
+        glass.refractionScale = LGPasscodeRefractionScale();
+        glass.blur = LGPasscodeBlur();
     }
 }
 
@@ -373,10 +340,10 @@ static void LGApplyPasscodeButtonVisualState(UIView *host, BOOL highlighted, BOO
     UIColor *targetTint = LGPasscodeButtonTargetTint(highlighted);
     CGAffineTransform targetTransform = CGAffineTransformMakeScale(LGPasscodeButtonTargetScale(highlighted),
                                                                   LGPasscodeButtonTargetScale(highlighted));
-    CGFloat targetSpecular = LGPasscodeButtonTargetSpecular(highlighted);
-    CGFloat targetBezel = LGPasscodeButtonTargetBezel(highlighted);
-    CGFloat targetRefraction = LGPasscodeButtonTargetRefraction(highlighted);
-    CGFloat targetBlur = LGPasscodeButtonTargetBlur(highlighted);
+    CGFloat targetSpecular = LGPasscodeSpecularOpacity();
+    CGFloat targetBezel = LGPasscodeBezelWidth();
+    CGFloat targetRefraction = LGPasscodeRefractionScale();
+    CGFloat targetBlur = LGPasscodeBlur();
 
     [host.layer removeAllAnimations];
     [tint.layer removeAllAnimations];
@@ -512,18 +479,19 @@ static void LGInjectPasscodeButtonIfNeeded(UIView *button) {
     CGFloat cornerRadius = MIN(CGRectGetWidth(host.bounds), CGRectGetHeight(host.bounds)) * 0.5;
     host.layer.cornerRadius = cornerRadius;
     host.layer.cornerCurve = kCACornerCurveCircular;
-    LGLockscreenInjectGlassWithSettingsAndMode(host,
-                                               LGPasscodeRenderingModeKey(),
-                                               cornerRadius,
-                                               LGPasscodeBezelWidth(),
-                                               LGPasscodeGlassThickness(),
-                                               LGPasscodeRefractionScale(),
-                                               LGPasscodeRefractiveIndex(),
-                                               LGPasscodeSpecularOpacity(),
-                                               LGPasscodeBlur(),
-                                               LGPasscodeWallpaperScale(),
-                                               0.0,
-                                               0.0);
+    LGLockscreenInjectGlassWithSettingsAndModeForFeatureEnabled(host,
+                                                                LGPasscodeRenderingModeKey(),
+                                                                LGPasscodeEnabled(),
+                                                                cornerRadius,
+                                                                LGPasscodeBezelWidth(),
+                                                                LGPasscodeGlassThickness(),
+                                                                LGPasscodeRefractionScale(),
+                                                                LGPasscodeRefractiveIndex(),
+                                                                LGPasscodeSpecularOpacity(),
+                                                                LGPasscodeBlur(),
+                                                                LGPasscodeWallpaperScale(),
+                                                                0.0,
+                                                                0.0);
     UIView *tint = LGEnsureTintOverlayView(host,
                                            kLGPasscodeButtonTintKey,
                                            0,
@@ -538,7 +506,7 @@ static void LGInjectPasscodeButtonIfNeeded(UIView *button) {
     [host bringSubviewToFront:tint];
     LiquidGlassView *glass = LGPasscodeButtonGlassView(host);
     if (glass) {
-        glass.shapeMaskImage = LGPasscodeCircleMaskImage(host.bounds.size);
+        glass.shapeMaskImage = nil;
     }
     BOOL alreadyInjected = previousHost == host && LGPasscodeButtonGlassView(host) && tint != nil;
     LGSetPasscodeStoredButtonHost(button, host);
@@ -559,11 +527,10 @@ static void LGInjectPasscodeButtonIfNeeded(UIView *button) {
                tint.backgroundColor,
                LGPasscodeButtonGlassView(host));
     if (glass) {
-        LGDebugLog(@"passcode inject geometry button=%@ hostBounds=%@ glassBounds=%@ maskSize=%@ mode=%@ bezel=%.2f blur=%.2f refr=%.2f",
+        LGDebugLog(@"passcode inject geometry button=%@ hostBounds=%@ glassBounds=%@ mode=%@ bezel=%.2f blur=%.2f refr=%.2f",
                    NSStringFromCGRect(button.bounds),
                    NSStringFromCGRect(host.bounds),
                    NSStringFromCGRect(glass.bounds),
-                   NSStringFromCGSize(glass.shapeMaskImage.size),
                    LGPasscodeRenderingModeKey(),
                    glass.bezelWidth,
                    glass.blur,
@@ -620,6 +587,38 @@ static void LGSetPasscodeButtonHighlighted(UIView *button, BOOL highlighted) {
     });
 }
 
+static void LGRefreshPasscodeHosts(void) {
+    UIApplication *app = UIApplication.sharedApplication;
+    if (!app) return;
+
+    Class buttonClass = NSClassFromString(@"SBPasscodeNumberPadButton");
+    Class materialClass = NSClassFromString(@"MTMaterialView");
+    void (^refreshWindow)(UIWindow *) = ^(UIWindow *window) {
+        LGTraverseViews(window, ^(UIView *view) {
+            if (buttonClass && [view isKindOfClass:buttonClass]) {
+                if (LGPasscodeEnabled()) {
+                    LGInjectPasscodeButtonIfNeeded(view);
+                } else {
+                    LGResetPasscodeButton(view);
+                }
+                return;
+            }
+            if (materialClass && [view isKindOfClass:materialClass]) {
+                LGApplyPasscodeBackgroundIfNeeded(view);
+            }
+        });
+    };
+
+    if (@available(iOS 13.0, *)) {
+        for (UIScene *scene in app.connectedScenes) {
+            if (![scene isKindOfClass:[UIWindowScene class]]) continue;
+            for (UIWindow *window in ((UIWindowScene *)scene).windows) refreshWindow(window);
+        }
+    } else {
+        for (UIWindow *window in LGApplicationWindows(app)) refreshWindow(window);
+    }
+}
+
 %hook MTMaterialView
 
 - (void)didMoveToSuperview {
@@ -638,6 +637,16 @@ static void LGSetPasscodeButtonHighlighted(UIView *button, BOOL highlighted) {
 }
 
 %end
+
+__attribute__((constructor))
+static void LGPasscodePrefsObserverInit(void) {
+    if (!LGIsSpringBoardProcess()) return;
+    LGObservePreferenceChanges(^{
+        dispatch_async(dispatch_get_main_queue(), ^{
+            LGRefreshPasscodeHosts();
+        });
+    });
+}
 
 %hook SBPasscodeNumberPadButton
 

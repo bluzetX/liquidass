@@ -68,6 +68,7 @@ static BOOL LGItemVisibleForCurrentPreferences(NSDictionary *item) {
     UIScrollView *_jumpScrollView;
     UIStackView *_jumpStack;
     NSMutableDictionary<NSString *, UIView *> *_sectionViews;
+    NSMutableArray<UIView *> *_orderedSectionViews;
     UIView *_respringBar;
     UIView *_scrollTopButton;
     NSLayoutConstraint *_scrollTopBottomConstraint;
@@ -742,14 +743,7 @@ static BOOL LGItemVisibleForCurrentPreferences(NSDictionary *item) {
 }
 
 - (CGFloat)scrollTopRevealThreshold {
-    UIView *targetSection = _sectionViews[LGLocalized(@"prefs.section.folder_icons.title")];
-    if (!targetSection) {
-        NSArray<NSDictionary *> *sections = [self sectionItems];
-        NSString *fallbackTitle = sections.count > 1 ? sections[1][@"title"] : sections.firstObject[@"title"];
-        if (fallbackTitle.length) {
-            targetSection = _sectionViews[fallbackTitle];
-        }
-    }
+    UIView *targetSection = _orderedSectionViews.count > 1 ? _orderedSectionViews[1] : _orderedSectionViews.firstObject;
     if (targetSection) {
         CGRect targetRect = [_contentStack convertRect:targetSection.frame toView:_scrollView];
         CGFloat topInset = _scrollView.adjustedContentInset.top;
@@ -822,6 +816,7 @@ static BOOL LGItemVisibleForCurrentPreferences(NSDictionary *item) {
 
 - (void)reloadVisibleSettings {
     _sectionViews = [NSMutableDictionary dictionary];
+    _orderedSectionViews = [NSMutableArray array];
     for (UIView *subview in [_contentStack.arrangedSubviews copy]) {
         [_contentStack removeArrangedSubview:subview];
         [subview removeFromSuperview];
@@ -1548,6 +1543,7 @@ static BOOL LGItemVisibleForCurrentPreferences(NSDictionary *item) {
     NSString *sectionTitleText = item[@"title"];
     if (sectionTitleText.length) {
         _sectionViews[sectionTitleText] = sectionView;
+        [_orderedSectionViews addObject:sectionView];
     }
 
     UIStackView *sectionStack = [[UIStackView alloc] initWithFrame:CGRectZero];

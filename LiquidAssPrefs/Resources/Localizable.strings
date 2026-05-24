@@ -36,10 +36,6 @@
 "prefs.control.background_dark_tint_alpha" = "Background Dark Tint Alpha";
 "prefs.control.active_scale" = "Active Scale";
 "prefs.control.active_light_tint_alpha" = "Active Light Tint Alpha";
-"prefs.control.active_specular" = "Active Specular";
-"prefs.control.active_bezel_width" = "Active Bezel Width";
-"prefs.control.active_refraction" = "Active Refraction";
-"prefs.control.active_blur" = "Active Blur";
 "prefs.control.press_in_damping" = "Press In Damping";
 "prefs.control.press_in_duration" = "Press In Duration";
 "prefs.control.press_in_mass" = "Press In Mass";
@@ -50,6 +46,9 @@
 "prefs.control.release_mass" = "Release Mass";
 "prefs.control.release_stiffness" = "Release Stiffness";
 "prefs.control.release_velocity" = "Release Velocity";
+"prefs.control.motion_highlights" = "Motion Highlights";
+"prefs.control.motion_highlights_fps" = "Motion FPS";
+"prefs.control.motion_highlights_sensitivity" = "Motion Sensitivity";
 
 "prefs.subtitle.enabled" = "Turn this glass view on or off.";
 "prefs.subtitle.bezel_width" = "Thickness of the glass view edge.";
@@ -73,10 +72,6 @@
 "prefs.subtitle.background_dark_tint_alpha" = "Dark tint strength behind the passcode buttons.";
 "prefs.subtitle.active_scale" = "Scale of the passcode button while pressed.";
 "prefs.subtitle.active_light_tint_alpha" = "Light tint strength of the passcode button while pressed.";
-"prefs.subtitle.active_specular" = "Specular strength of the passcode button while pressed.";
-"prefs.subtitle.active_bezel_width" = "Bezel width of the passcode button while pressed.";
-"prefs.subtitle.active_refraction" = "Refraction strength of the passcode button while pressed.";
-"prefs.subtitle.active_blur" = "Blur amount of the passcode button while pressed.";
 "prefs.subtitle.press_in_damping" = "Spring damping for the passcode button press in animation.";
 "prefs.subtitle.press_in_duration" = "Animation duration for the passcode button press in transition.";
 "prefs.subtitle.press_in_mass" = "Spring mass for the passcode button press in animation.";
@@ -87,6 +82,9 @@
 "prefs.subtitle.release_mass" = "Spring mass for the passcode button release animation.";
 "prefs.subtitle.release_stiffness" = "Spring stiffness for the passcode button release animation.";
 "prefs.subtitle.release_velocity" = "Initial spring velocity for the passcode button release animation.";
+"prefs.subtitle.motion_highlights" = "Make specular highlights react to device motion.";
+"prefs.subtitle.motion_highlights_fps" = "Caps motion-driven highlight redraws.";
+"prefs.subtitle.motion_highlights_sensitivity" = "How strongly tilt changes the highlight angle.";
 "prefs.subtitle.rendering_method" = "Choose whether this surface samples from cached snapshots or live backdrop capture.";
 "prefs.subtitle.font_weight" = "Weight used for the legacy iOS 15 and lower glass clock.";
 "prefs.subtitle.font_style" = "Switches the legacy iOS 15 clock between the regular, rounded, and iOS 26 styles.";
@@ -133,6 +131,8 @@
 "prefs.section.misc.title" = "Miscellaneous";
 "prefs.section.experimental_rendering.title" = "Rendering Methods";
 "prefs.section.experimental_rendering.subtitle" = "Choose snapshot or live capture for each surface. This is experimental and can be heavy. I do not recommend you to change anything below.";
+"prefs.section.motion_highlights.title" = "Motion Highlights";
+"prefs.section.motion_highlights.subtitle" = "Use device motion to steer glass specular highlights.";
 "prefs.section.surface_tint_override.title" = "Per-Surface Tint Override";
 "prefs.section.surface_tint_override.subtitle" = "Override tint mode for individual surfaces. Follow System uses the current system appearance.";
 "prefs.section.display_link_toggle.title" = "Manual Display-Link Toggle";
