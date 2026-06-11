@@ -10,6 +10,8 @@ Pull requests will still be reviewed and merged, and I encourage people contribu
 # Liquid (Gl)ass
 This tweak is incomplete, issues WILL happen.
 
+Nightly builds that contains the bleeding edge changes are available [here](https://github.com/winaviation-tweaks/liquidass/releases)
+
 ## Applied to
 - folders on the homescreen
 - opened folders
