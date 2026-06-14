@@ -66,7 +66,7 @@
 "prefs.subtitle.fps_limit_60" = "Обмежує рендеринг скла в реальному часі в діапазоні od 1 до 60 FPS. Низькі значення підвищують продуктивність.";
 "prefs.subtitle.floating_radius" = "Скруглення скла в плаваючому режимі.";
 "prefs.subtitle.full_screen_radius" = "Скруглення скла в повноекранному режимі.";
-"prefs.subtitle.home_button_radius" = "Скруглення скла на пристроях із кнопкою «Додому».";
+"prefs.subtitle.home_button_radius" = "Скруглення скла на пристроях із кнопкою "Додому".";
 "prefs.subtitle.icon_spacing" = "Зазор між іконкою та підписом.";
 "prefs.subtitle.row_inset" = "Відступи ліворуч і праворуч для рядків дій.";
 "prefs.subtitle.background_dark_tint_alpha" = "Інтенсивность темного відтінку за кнопками введення пароля.";
@@ -132,7 +132,7 @@
 "prefs.section.experimental_rendering.title" = "Методи рендерингу";
 "prefs.section.experimental_rendering.subtitle" = "Виберіть знімок екрана або захоплення наживо для кожної поверхні. Це експериментальна функція, яка може сильно навантажувати систему. Не рекомендується тут щось змінювати.";
 "prefs.section.surface_tint_override.title" = "Перевизначення відтінку поверхонь";
-"prefs.section.surface_tint_override.subtitle" = "Налаштування режиму відтінку для окремих поверхонь. Варіант «За системою» використовує поточне системне оформлення.";
+"prefs.section.surface_tint_override.subtitle" = "Налаштування режиму відтінку для окремих поверхонь. Варіант "За системою" використовує поточне системне оформлення.";
 "prefs.section.display_link_toggle.title" = "Ручний перемикач Display-Link";
 "prefs.section.display_link_toggle.subtitle" = "Виберіть, яким поверхням дозволено оновлювати скляний ефект через Display-Link.";
 "prefs.section.motion_highlights.title" = "Відблиски при русі";
@@ -206,8 +206,8 @@
 "prefs.section.preferences.title" = "Параметри";
 "prefs.section.preferences.subtitle" = "Параметри, що використовуються цим інтерфейсом налаштувань.";
 "prefs.misc.preferences_back_button.title" = "Кнопки навігації";
-"prefs.misc.preferences_back_button.subtitle" = "Використовувати скло для кнопок «Назад» та скидання в меню навігації.";
-"prefs.misc.preferences_go_to_top.title" = "Кнопка «Нагору»";
+"prefs.misc.preferences_back_button.subtitle" = "Використовувати скло для кнопок "Назад" та скидання в меню навігації.";
+"prefs.misc.preferences_go_to_top.title" = "Кнопка "Нагору"";
 "prefs.misc.preferences_go_to_top.subtitle" = "Використовувати скло для плаваючої кнопки швидкого скролу вгору.";
 "prefs.misc.preferences_respring_bar.title" = "Панель респрингу";
 "prefs.misc.preferences_respring_bar.subtitle" = "Використовувати скло для плаваючого нагадування про респринг.";
@@ -255,7 +255,7 @@
 "prefs.misc.import_export_section.title" = "Імпорт/Експорт налаштувань";
 "prefs.misc.import_export_section.subtitle" = "Поділіться своєю конфігурацією або відновіть її з файлу JSON.";
 "prefs.misc.export_prefs.title" = "Експорт налаштувань";
-"prefs.misc.export_prefs.subtitle" = "Експортує файл налаштувань у форматі JSON і відкриває системне меню "Поділитися";
+"prefs.misc.export_prefs.subtitle" = "Експортує файл налаштувань у форматі JSON і відкриває системне меню "Поділитися"";
 "prefs.misc.import_prefs.title" = "Імпорт налаштувань";
 "prefs.misc.import_prefs.subtitle" = "Імпортує файл налаштувань із формату JSON.";
 "prefs.misc.tint_override_per_surface.title" = "Перевизначення відтінку поверхонь";
@@ -264,7 +264,7 @@
 "prefs.tint_override.light.title" = "Примусовий світлий відтінок";
 "prefs.tint_override.dark.title" = "Примусовий темний відтінок";
 "prefs.misc.settings_controls.title" = "Параметри iOS 26";
-"prefs.misc.settings_controls.subtitle" = "Намагається відтворити інтерфейс програми «Параметри» з iOS 26";
+"prefs.misc.settings_controls.subtitle" = "Намагається відтворити інтерфейс програми "Параметри" з iOS 26";
 "prefs.misc.custom_views.title" = "Кастомні елементи (Розширено)";
 "prefs.misc.custom_views.subtitle" = "Впроваджує скляний ефект в елементи (views), що відповідають правилам ієрархії класів.";
 "prefs.custom_views.general.title" = "Загальні";
