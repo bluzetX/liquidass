@@ -30,7 +30,7 @@
 "prefs.control.variable_font_softness" = "Мягкость";
 "prefs.control.floating_radius" = "Радиус плавающего окна";
 "prefs.control.full_screen_radius" = "Радиус полноэкранного режима";
-"prefs.control.home_button_radius" = "Радиус для устройств с кнопкой «Домой»";
+"prefs.control.home_button_radius" = "Радиус для устройств с кнопкой Домой";
 "prefs.control.icon_spacing" = "Расстояние между иконками";
 "prefs.control.row_inset" = "Отступы строки";
 "prefs.control.background_dark_tint_alpha" = "Прозрачность тёмного фона";
@@ -66,7 +66,7 @@
 "prefs.subtitle.fps_limit_60" = "Ограничивает рендеринг живого стекла в диапазоне от 1 до 60 FPS. Низкие значения повышают производительность.";
 "prefs.subtitle.floating_radius" = "Скругление стекла в плавающем режиме.";
 "prefs.subtitle.full_screen_radius" = "Скругление стекла в полноэкранном режиме.";
-"prefs.subtitle.home_button_radius" = "Скругление стекла на устройствах с кнопкой "Домой".";
+"prefs.subtitle.home_button_radius" = "Скругление стекла на устройствах с кнопкой Домой.";
 "prefs.subtitle.icon_spacing" = "Зазор между иконкой и подписью.";
 "prefs.subtitle.row_inset" = "Отступы слева и справа для строк действий.";
 "prefs.subtitle.background_dark_tint_alpha" = "Интенсивность тёмного оттенка за кнопками ввода пароля.";
@@ -97,7 +97,7 @@
 "prefs.subtitle.variable_font_size" = "Множитель размера шрифта для часов iOS 26.";
 "prefs.subtitle.variable_font_weight" = "Значение оси насыщенности для шрифта часов iOS 26.";
 "prefs.subtitle.variable_font_width" = "Значение оси ширины для шрифта часов iOS 26.";
-"prefs.subtitle.variable_font_height" = "Значение оси heights для шрифта часов iOS 26.";
+"prefs.subtitle.variable_font_height" = "Значение оси высоты для шрифта часов iOS 26.";
 "prefs.subtitle.variable_font_softness" = "Значение оси мягкости для шрифта часов iOS 26.";
 "prefs.font_style.current.title" = "Обычный";
 "prefs.font_style.rounded.title" = "Закруглённый";
@@ -105,7 +105,7 @@
 "prefs.root.runtime_cache_footer" = "%@ кэшировано в ОЗУ";
 
 "prefs.rendering.snapshot.title" = "Снимок экрана";
-"prefs.rendering.live_capture.title" = "Захопление наживо";
+"prefs.rendering.live_capture.title" = "Живой захват";
 
 "prefs.section.dock.title" = "Док-панель";
 "prefs.section.dock.subtitle" = "Материалы док-панели, варианты формы, качество рендеринга и т. д.";
@@ -130,7 +130,7 @@
 "prefs.section.main.title" = "Основные настройки";
 "prefs.section.misc.title" = "Разное";
 "prefs.section.experimental_rendering.title" = "Методы рендеринга";
-"prefs.section.experimental_rendering.subtitle" = "Выберите снимок экрана или захват наживо для каждой поверхности. Это экспериментальная функция, которая может сильно нагружать систему. Не рекомендуется здесь что-либо менять.";
+"prefs.section.experimental_rendering.subtitle" = "Выберите снимок экрана или живой захват для каждой поверхности. Это экспериментальная функция, которая может сильно нагружать систему. Не рекомендуется здесь что-либо менять.";
 "prefs.section.surface_tint_override.title" = "Переопределение оттенка поверхностей";
 "prefs.section.surface_tint_override.subtitle" = "Настройка режима оттенка для отдельных поверхностей. Вариант "По системе" использует текущее системное оформление.";
 "prefs.section.display_link_toggle.title" = "Ручной переключатель Display-Link";
@@ -191,7 +191,7 @@
 "prefs.section.lockscreen_date_label.subtitle" = "Настройка текста даты на экране блокировки.";
 "prefs.control.date_format_enabled" = "Свой формат даты";
 "prefs.subtitle.date_format_enabled" = "Заменить стандартную дату на экране блокировки на собственный формат.";
-"prefs.control.date_format" = "Format";
+"prefs.control.date_format" = "Формат";
 "prefs.subtitle.date_format" = "Использует синтаксис шаблонов даты Unicode, например: EEE MMM d.";
 "prefs.surface.app_library.title" = "Библиотека приложений";
 "prefs.surface.app_library.subtitle" = "Настройки стекла для элементов Библиотеки приложений.";
@@ -223,20 +223,20 @@
 "prefs.misc.language.subtitle" = "Выберите язык для этого меню настроек.";
 "prefs.misc.app_library_composite.title" = "Захват иконок в Библиотеке";
 "prefs.misc.app_library_composite.subtitle" = "Также берёт образцы иконок экрана "Домой", а не только обоев в Библиотеке приложений.";
-"prefs.misc.live_capture.title" = "Настройка захвата наживо";
-"prefs.misc.live_capture.subtitle" = "Настройка частоты кадров захвата наживо и качества текстуры.";
+"prefs.misc.live_capture.title" = "Настройка живого захвата";
+"prefs.misc.live_capture.subtitle" = "Настройка частоты кадров живого захвата и качества текстуры.";
 "prefs.section.live_capture_general.title" = "Текстура захвата";
 "prefs.section.live_capture_general.subtitle" = "Более низкие значения снижают нагрузку на процессор до того, как изображение попадёт в Metal.";
 "prefs.section.live_capture_fps.title" = "FPS поверхности";
-"prefs.section.live_capture_fps.subtitle" = "Ограничивает частоту обновления фона для каждой поверхности с захватом наживо.";
+"prefs.section.live_capture_fps.subtitle" = "Ограничивает частоту обновления фона для каждой поверхности с живым захватом.";
 "prefs.live_capture.scale_factor.title" = "Коэффициент масштабирования";
-"prefs.live_capture.scale_factor.subtitle" = "Множитель, применяемый к масштабу устройства для текстур захвата наживо.";
+"prefs.live_capture.scale_factor.subtitle" = "Множитель, применяемый к масштабу устройства для текстур живого захвата.";
 "prefs.live_capture.minimum_scale.title" = "Минимальный масштаб";
 "prefs.live_capture.minimum_scale.subtitle" = "Минимально допустимый масштаб захвата после автоматического изменения размера.";
 "prefs.live_capture.maximum_scale.title" = "Максимальный масштаб";
 "prefs.live_capture.maximum_scale.subtitle" = "Максимально допустимый масштаб захвата после автоматического изменения размера.";
 "prefs.live_capture.maximum_pixels.title" = "Максимум пикселей";
-"prefs.live_capture.maximum_pixels.subtitle" = "Лимит пикселей для каждой текстуры захвата наживо.";
+"prefs.live_capture.maximum_pixels.subtitle" = "Лимит пикселей для каждой текстуры живого захвата.";
 "prefs.live_capture.fps.subtitle" = "Максимальная частота обновления живого фона для этой поверхности.";
 "prefs.control_center.live_capture_budget.title" = "Бюджет захвата наживо";
 "prefs.control_center.live_capture_budget.subtitle" = "Модули Пункта управления, обновляемые за один тик. Более высокие значения быстрее восстанавливают статические модули, но сильнее нагружают процессор.";
@@ -245,7 +245,7 @@
 "prefs.misc.display_link_toggle.subtitle" = "Показывать отдельные переключатели Display-Link для поверхностей, которые их используют.";
 "prefs.misc.display_link_surface.subtitle" = "Разрешить этой поверхности запускать обновления стекла на основе Display-Link.";
 "prefs.misc.debug_logging.title" = "Отладочное логирование";
-"prefs.misc.debug_logging.subtitle" = "Включить подробные диагностические логи, записываемые в /tmp/LiquidAss.log.";
+"prefs.misc.debug_logging.subtitle" = "Включить подробные диагностические логи, записываемые в /tmp/LiquidAss.log";
 "prefs.misc.debug_profiling.title" = "Профилирование отладки";
 "prefs.misc.debug_profiling.subtitle" = "Логирует краткие сводки производительности.";
 "prefs.misc.all_day_profiling.title" = "Круглосуточный профайлер";
